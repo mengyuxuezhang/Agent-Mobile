@@ -1,5 +1,6 @@
 import java.time.OffsetDateTime
 import java.time.ZoneOffset
+import java.util.Base64
 import java.util.Properties
 
 plugins {
@@ -7,6 +8,14 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
+
+// Flutter passes these same values to Dart and this Gradle build.
+val flutterDefines = providers.gradleProperty("dart-defines").orNull.orEmpty()
+    .split(',')
+    .filter { it.isNotBlank() }
+    .map { String(Base64.getDecoder().decode(it), Charsets.UTF_8) }
+    .filter { '=' in it }
+    .associate { it.substringBefore('=') to it.substringAfter('=') }
 
 val keyProps = Properties().apply {
     rootProject.file("key.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
@@ -34,7 +43,13 @@ fun buildMinuteVersionCode(): Int {
     return (t.year - 2026) * 100_000_000 + t.monthValue * 1_000_000 + t.dayOfMonth * 10_000 + t.hour * 100 + t.minute
 }
 
+if ((flutterDefines["AGENT_ANDROID_REQUIRE_SIGNING"] == "true" ||
+        providers.gradleProperty("agentRequireReleaseSigning").orNull == "true") && !hasWholeReleaseKey) {
+    error("Agent Mobile release builds require a valid signing configuration")
+}
+
 android {
+    buildFeatures { resValues = true }
     namespace = "io.github.ccch1mneyyy.dsh_app"
     compileSdk = flutter.compileSdkVersion
     // The device tests under src/androidTest are AndroidTestCase tests; these platform libraries
@@ -49,8 +64,12 @@ android {
     }
 
     defaultConfig {
-        applicationId = providers.gradleProperty("agentApplicationId").getOrElse("cn.mengyunet.agentmobile")
-        manifestPlaceholders["agentAppName"] = providers.gradleProperty("agentAppName").getOrElse("Agent Mobile")
+        applicationId = flutterDefines["AGENT_ANDROID_APPLICATION_ID"]
+            ?: providers.gradleProperty("agentApplicationId").getOrElse("cn.mengyunet.agentmobile")
+        manifestPlaceholders["agentAppName"] = flutterDefines["AGENT_APP_NAME"]
+            ?: providers.gradleProperty("agentAppName").getOrElse("Agent Mobile")
+        resValue("color", "agent_brand_primary", flutterDefines["AGENT_BRAND_PRIMARY"]
+            ?: providers.gradleProperty("agentPrimaryColor").getOrElse("#3745AD"))
         // java.nio.file (symlinks while unpacking the rootfs) needs API 26.
         minSdk = 26
         // Target 28 like Termux, so the API 29+ exec restriction on app-private

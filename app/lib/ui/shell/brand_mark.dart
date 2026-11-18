@@ -17,8 +17,12 @@ class BrandMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    const primaryHex = String.fromEnvironment('AGENT_BRAND_PRIMARY');
+    final colorValue = RegExp(r'^#[a-fA-F0-9]{6}$').hasMatch(primaryHex) ? int.parse(primaryHex.substring(1), radix: 16) : null;
+    final primary = colorValue == null ? scheme.primary : Color(0xff000000 | colorValue);
+    final onPrimary = colorValue == null ? scheme.onPrimary : (ThemeData.estimateBrightnessForColor(primary) == Brightness.dark ? Colors.white : Colors.black);
     final icon = Icon(Icons.auto_awesome, size: tile ? size * .6 : size,
-        color: tile ? scheme.onPrimary : color ?? scheme.primary,
+        color: tile ? onPrimary : color ?? primary,
         semanticLabel: AppInfo.wordmark);
     if (!tile) return icon;
     return Container(
@@ -26,7 +30,7 @@ class BrandMark extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: scheme.primary,
+        color: primary,
         borderRadius: BorderRadius.circular(size * .22),
       ),
       child: icon,

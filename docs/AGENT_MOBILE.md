@@ -20,6 +20,10 @@ Agent Mobile 是 [dsh-Go](https://github.com/ccch1mneyyy/dsh-Go) 的 Android 衍
 
 模型适配位于 `app/lib/managed/`，沿用上游自定义 provider 接口。应用进程将获授权的模型请求转发至同一个 YushuHub 项目的模型网关。DSH 持有本次启动的本地连接密钥，用户令牌仅存在于应用进程中。模型用量和账务以 YushuHub 记录为准，应用不会本地预扣或自动重发。退出账号立即关闭转发并尝试清理本机 provider。
 
-运行 `dart run tool/managed/verify_model_gateway.dart`（工作目录 `app/`）可验证环回 HTTP 转发、授权模型拦截、流式用量和积分不足响应。Android 模拟器使用 x64 flavor 和同源 x86_64 DSH 运行时。首次后台联调先核对会员、余额和模型，发送一条短消息后刷新积分流水，对照桌面端同账号记录。贴牌打包和桌面下载入口在该闭环通过后接入。
+运行 `dart run tool/managed/verify_model_gateway.dart`（工作目录 `app/`）可验证环回 HTTP 转发、授权模型拦截、流式用量和积分不足响应。Android 模拟器使用 x64 flavor 和同源 x86_64 DSH 运行时。首次后台联调先核对会员、余额和模型，发送一条短消息后刷新积分流水，对照桌面端同账号记录。Android 13 x64 模拟器已验证同项目账号登录、授权模型回复和后台扣费。单条对话有可能触发多笔模型调用，用积分流水汇总核对余额。
+
+从羽枢项目编辑页导出 Android 构建配置后，在受控构建机运行 `python tooling/build-managed-android.py <配置文件> --abi arm64 --release`。该命令复用项目 ID、应用名、品牌强调色与 HTTPS API 基址，并从项目 ID 派生独立的 Android 包名。准备对应 ABI 的运行时和有效的 Android 签名配置后再构建正式包。模拟器可用 `--abi x64` 生成调试包。
+
+桌面入口沿用羽枢的「客户端外部链接」。填写用户可打开的 HTTPS 下载页，启用「下载手机端」，重新构建该品牌桌面包后从「扩展入口」打开。
 
 对外提供 APK 时，在同一下载页提供该版本的对应源码与构建说明，保留版权、许可和变更声明。签名凭据、供应商密钥和用户会话保存在各自的运行环境。
