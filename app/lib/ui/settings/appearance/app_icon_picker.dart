@@ -12,7 +12,6 @@ import '../../../l10n/l10n.dart';
 import '../../../state/android_features.dart';
 import '../../../state/app_icon_state.dart';
 import '../../common/pressable.dart';
-import '../../shell/brand_glyph.g.dart';
 import '../../theme/theme.dart';
 import '../../common/brief_notice.dart';
 
@@ -266,20 +265,18 @@ class _IconPainter extends CustomPainter {
         const Rect.fromLTWH(0, 0, 108, 108),
         Paint()..shader = ui.Gradient.linear(AppIconArt.start, AppIconArt.end, [art.from, art.to]),
       );
-    switch (art.glyph) {
-      case AppIconGlyph.mono:
-        final paint = Paint()..color = art.mono!;
-        canvas
-          ..drawPath(BrandGlyph.body, paint)
-          ..drawPath(BrandGlyph.bubble, paint);
-      case AppIconGlyph.glassDark || AppIconGlyph.glassLight:
-        final dark = art.glyph == AppIconGlyph.glassDark;
-        canvas
-          ..drawPath(BrandGlyph.body, Paint()..shader = dark ? BrandGlyph.tailDark : BrandGlyph.tailLight)
-          ..drawPath(BrandGlyph.fin, Paint()..shader = dark ? BrandGlyph.finDark : BrandGlyph.finLight)
-          ..drawPath(BrandGlyph.belly, Paint()..shader = dark ? BrandGlyph.bellyDark : BrandGlyph.bellyLight)
-          ..drawPath(BrandGlyph.bubble, Paint()..shader = dark ? BrandGlyph.bubbleDark : BrandGlyph.bubbleLight);
-    }
+    final mark = Path()
+      ..moveTo(54, 24)
+      ..lineTo(61.5, 46.5)
+      ..lineTo(84, 54)
+      ..lineTo(61.5, 61.5)
+      ..lineTo(54, 84)
+      ..lineTo(46.5, 61.5)
+      ..lineTo(24, 54)
+      ..lineTo(46.5, 46.5)
+      ..close();
+    final tint = art.mono ?? (art.glyph == AppIconGlyph.glassLight ? const Color(0xFF3745AD) : Colors.white);
+    canvas.drawPath(mark, Paint()..color = tint);
     canvas
       ..restore()
       // Half of it falls outside the clip: a 1 px line just inside the edge.

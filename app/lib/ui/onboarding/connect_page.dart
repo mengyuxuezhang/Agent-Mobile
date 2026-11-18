@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../managed/account_page.dart';
+import '../../managed/brand.dart';
 import '../../runtime/runtime_state.dart';
 import '../../state/account_state.dart';
 import '../../state/onboarding_state.dart';
@@ -157,6 +159,13 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
     widget.onDone();
   }
 
+  Future<void> _managedAccount() async {
+    final connected = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const ManagedAccountPage(finishOnConnection: true)),
+    );
+    if (connected == true && mounted) await _skip();
+  }
+
   /// The add-provider form over this step; the engine is already starting.
   Future<void> _otherProvider() async {
     ref.read(accountProvider.notifier).dismissFailure();
@@ -194,6 +203,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
           setState(() => _keyEntry = true);
         },
         onOther: _otherProvider,
+        onManagedAccount: ManagedBrand.isConfigured ? _managedAccount : null,
         onSkip: _skip,
       );
     }
@@ -226,6 +236,7 @@ class _Choose extends StatelessWidget {
     required this.onSignIn,
     required this.onApiKey,
     required this.onOther,
+    this.onManagedAccount,
     required this.onSkip,
   });
 
@@ -233,6 +244,7 @@ class _Choose extends StatelessWidget {
   final VoidCallback onSignIn;
   final VoidCallback onApiKey;
   final VoidCallback onOther;
+  final VoidCallback? onManagedAccount;
   final VoidCallback onSkip;
 
   @override
@@ -255,6 +267,13 @@ class _Choose extends StatelessWidget {
         if (state.failure case final failure?) ...[const SizedBox(height: 16), SignInFailureCard(failure: failure)],
         const Spacer(flex: 2),
         const SizedBox(height: 24),
+        if (onManagedAccount != null) ...[
+          FilledButton(
+            onPressed: onManagedAccount,
+            child: Text(Localizations.localeOf(context).languageCode == 'zh' ? '使用羽枢账号' : 'Use a YushuHub account'),
+          ),
+          const SizedBox(height: 10),
+        ],
         if (unsupported)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),

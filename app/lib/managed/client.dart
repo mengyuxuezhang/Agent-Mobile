@@ -18,12 +18,7 @@ class ManagedClient {
 
   Future<JsonObject> captcha() => _request('client/auth/login-captcha');
 
-  Future<String> login(
-    String username,
-    String password,
-    String challengeId,
-    String answer,
-  ) async {
+  Future<String> login(String username, String password, String challengeId, String answer) async {
     final session = await _request(
       'client/auth/login',
       body: {
@@ -37,30 +32,20 @@ class ManagedClient {
       },
     );
     final token = session['token'];
-    if (token is! String || token.isEmpty)
-      throw const FormatException('Missing token');
+    if (token is! String || token.isEmpty) throw const FormatException('Missing token');
     return token;
   }
 
-  Future<JsonObject> account(String token) =>
-      _request('client/auth/me', token: token);
-  Future<JsonObject> credits(String token) =>
-      _request('client/credits/me', token: token);
-  Future<JsonObject> models(String token) =>
-      _request('client/model/models', token: token);
+  Future<JsonObject> account(String token) => _request('client/auth/me', token: token);
+  Future<JsonObject> credits(String token) => _request('client/credits/me', token: token);
+  Future<JsonObject> models(String token) => _request('client/model/models', token: token);
 
-  Future<JsonObject> _request(
-    String route, {
-    String? token,
-    JsonObject? body,
-  }) async {
-    final request =
-        http.Request(
-            body == null ? 'GET' : 'POST',
-            ManagedBrand.api.resolve(route),
-          )
-          ..followRedirects = false
-          ..headers['accept'] = 'application/json';
+  Future<JsonObject> ledger(String token) => _request('client/credits/ledger?page=1&pageSize=5', token: token);
+
+  Future<JsonObject> _request(String route, {String? token, JsonObject? body}) async {
+    final request = http.Request(body == null ? 'GET' : 'POST', ManagedBrand.api.resolve(route))
+      ..followRedirects = false
+      ..headers['accept'] = 'application/json';
     if (token != null) {
       request.headers['authorization'] = 'Bearer $token';
       request.headers['x-agent-project-id'] = ManagedBrand.projectId;
@@ -69,15 +54,10 @@ class ManagedClient {
       request.headers['content-type'] = 'application/json';
       request.body = jsonEncode(body);
     }
-    final response = await _http
-        .send(request)
-        .then(http.Response.fromStream)
-        .timeout(const Duration(seconds: 30));
+    final response = await _http.send(request).then(http.Response.fromStream).timeout(const Duration(seconds: 30));
     if (response.statusCode != 200) throw ManagedApiError(response.statusCode);
     final envelope = jsonDecode(utf8.decode(response.bodyBytes));
-    if (envelope is! JsonObject ||
-        envelope['success'] != true ||
-        envelope['data'] is! JsonObject) {
+    if (envelope is! JsonObject || envelope['success'] != true || envelope['data'] is! JsonObject) {
       throw const FormatException('Invalid API response');
     }
     return envelope['data'] as JsonObject;

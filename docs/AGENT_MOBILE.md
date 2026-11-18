@@ -16,6 +16,10 @@ Agent Mobile 是 [dsh-Go](https://github.com/ccch1mneyyy/dsh-Go) 的 Android 衍
 | API 入口 | `AGENT_API_BASE_URL` Dart define，使用 HTTPS 的 YushuHub API 根地址，例如 `https://example.invalid/api/` |
 | 更新地址 | `AGENT_UPDATE_FEED` Dart define，未配置时禁用远程版本源 |
 
-配置项目和 API 后，在设置中进入「羽枢账号」。当前实现请求登录验证码，使用桌面账号登录，读取账号、会员、余额和模型目录，并可刷新或退出。该入口用于开发联调。DSH 引擎的模型调用及扣费、品牌资源生成、后台打包入口、桌面下载入口和真机验证仍需接通。
+配置品牌项目和 API 后，可在首次设置或「设置 → 羽枢账号」使用桌面端账号登录。页面读取同一会员、积分余额、最近积分流水和授权模型。启动本机 DSH 后，选择「连接羽枢模型到本机引擎」，回到聊天并在模型列表选择 YushuHub 下的文本模型。
+
+模型适配位于 `app/lib/managed/`，沿用上游自定义 provider 接口。应用进程将获授权的模型请求转发至同一个 YushuHub 项目的模型网关。DSH 持有本次启动的本地连接密钥，用户令牌仅存在于应用进程中。模型用量和账务以 YushuHub 记录为准，应用不会本地预扣或自动重发。退出账号立即关闭转发并尝试清理本机 provider。
+
+运行 `dart run tool/managed/verify_model_gateway.dart`（工作目录 `app/`）可验证环回 HTTP 转发、授权模型拦截、流式用量和积分不足响应。Android 模拟器使用 x64 flavor 和同源 x86_64 DSH 运行时。首次后台联调先核对会员、余额和模型，发送一条短消息后刷新积分流水，对照桌面端同账号记录。贴牌打包和桌面下载入口在该闭环通过后接入。
 
 对外提供 APK 时，在同一下载页提供该版本的对应源码与构建说明，保留版权、许可和变更声明。签名凭据、供应商密钥和用户会话保存在各自的运行环境。
