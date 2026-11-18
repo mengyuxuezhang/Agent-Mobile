@@ -1,3 +1,4 @@
+import '../../state/app_info.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -244,7 +245,7 @@ class _UpdateSheetState extends ConsumerState<UpdateSheet> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('DSH ${latest.version.name}', style: theme.textTheme.titleLarge),
+                            Text('${AppInfo.name} ${latest.version.name}', style: theme.textTheme.titleLarge),
                             const SizedBox(height: 2),
                             Text(facts, style: theme.textTheme.bodySmall?.copyWith(color: colors.textTertiary)),
                           ],

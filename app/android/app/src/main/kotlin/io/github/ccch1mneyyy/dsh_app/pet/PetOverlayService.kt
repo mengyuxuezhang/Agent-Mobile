@@ -99,7 +99,7 @@ class PetOverlayService : Service() {
             )
             return Notification.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_dsh)
-                .setContentTitle(AppStrings.APP_NAME)
+                .setContentTitle(AppStrings.appName(context))
                 .setContentText(AppStrings.get(context, R.string.pet_running))
                 .setOngoing(true)
                 .setContentIntent(open)

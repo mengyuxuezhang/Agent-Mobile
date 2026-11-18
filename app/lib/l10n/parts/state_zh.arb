@@ -1,5 +1,5 @@
 {
-  "stateDiagnosticsSubject": "DSH Go 诊断包",
+  "stateDiagnosticsSubject": "本应用 诊断包",
   "stateStoragePermission": "没有存储权限，存不进「下载」",
   "stateDiagnosticsStorageFull": "存储空间不足，没能生成诊断包",
   "stateDiagnosticsExportFailed": "没能导出诊断包",
@@ -785,7 +785,7 @@
     }
   },
   "stateProviderTokenCountInvalid": "填写数字，如 128K",
-  "appSlogan": "随时随刻，想go就Go！",
+  "appSlogan": "你的移动 AI 工作台",
   "statePasteEmpty": "剪贴板中没有可粘贴的文本。",
   "statePasteDenied": "系统未授予粘贴权限，请重新点击粘贴按钮。",
   "statePasteBusy": "粘贴窗口尚未结束或仍在关闭，请完成或取消后重试。",

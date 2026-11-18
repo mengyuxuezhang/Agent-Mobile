@@ -249,7 +249,7 @@ object LiveActivity {
         val builder = Notification.Builder(ctx, CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_dsh)
             .setColor(color)
-            .setContentTitle(AppStrings.APP_NAME)
+            .setContentTitle(AppStrings.appName(ctx))
             .setContentText(c.publicText)
             .setOngoing(true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) c.chipWords?.let(builder::setShortCriticalText)

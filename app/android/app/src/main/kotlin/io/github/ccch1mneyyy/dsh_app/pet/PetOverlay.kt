@@ -2031,7 +2031,7 @@ internal object PetOverlay {
         openPendingIntent = pi
         val n = Notification.Builder(app, CHANNEL_OPEN)
             .setSmallIcon(R.drawable.ic_stat_dsh)
-            .setContentTitle(title ?: AppStrings.APP_NAME)
+            .setContentTitle(title ?: AppStrings.appName(app))
             .setContentText(AppStrings.get(app, R.string.pet_tap_open))
             .setContentIntent(pi)
             .setAutoCancel(true)

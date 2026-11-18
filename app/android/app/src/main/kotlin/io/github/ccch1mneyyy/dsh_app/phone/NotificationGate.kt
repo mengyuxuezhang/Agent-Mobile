@@ -110,7 +110,7 @@ class NotificationGate(
         val id = ids.incrementAndGet()
         runCatching {
             nm.notify(TAG, id, builder(CHANNEL_CONFIRM).setSmallIcon(R.drawable.ic_stat_dsh)
-                .setContentTitle(AppStrings.APP_NAME)
+                .setContentTitle(AppStrings.appName(app))
                 .setContentText(PhonePromptUi.title(app, p.ticket.content))
                 .setCategory(Notification.CATEGORY_REMINDER).setVisibility(Notification.VISIBILITY_PRIVATE)
                 .setOngoing(true).setTimeoutAfter(p.ticket.remainingMs).build())

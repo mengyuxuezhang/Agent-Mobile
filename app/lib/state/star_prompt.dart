@@ -16,6 +16,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../managed/brand.dart';
 import '../phone/phone_channel.dart' show PhoneTaskStatus;
 import '../pets/pet_signals.dart' show petFocusProvider, petPendingProvider;
 import '../update/update_config.dart' show updateRepo;
@@ -29,7 +30,7 @@ import 'voice_state.dart';
 const starPromptEnabled = bool.fromEnvironment('DSH_STAR_PROMPT');
 
 /// The switch as the app reads it (tests turn it on).
-final starPromptGateProvider = Provider<bool>((ref) => starPromptEnabled);
+final starPromptGateProvider = Provider<bool>((ref) => starPromptEnabled && !ManagedBrand.isConfigured);
 
 /// Where 「去 GitHub 点 Star」 goes: the public repository's page (its releases
 /// are the app's updates).

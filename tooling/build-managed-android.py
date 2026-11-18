@@ -1,6 +1,7 @@
 """Build a branded APK using a YushuHub project export."""
 
 import argparse
+from contextlib import contextmanager
 import json
 from pathlib import Path
 import re
@@ -41,11 +42,45 @@ def brand_inputs(config):
     }
 
 
+@contextmanager
+def staged_icon(root, icon, temporary, defines):
+    if icon is None:
+        yield
+        return
+    data = icon.read_bytes()
+    if not data.startswith(b"\x89PNG\r\n\x1a\n") or not 32 <= len(data) <= 4 * 1024 * 1024:
+        raise ValueError("The project icon must be a PNG of at most 4 MiB")
+    flutter_asset = root / "app/assets/managed-brand/icon.png"
+    with flutter_asset.open("xb") as output:
+        output.write(data)
+    try:
+        resources = temporary / "android-res"
+        drawable = resources / "drawable-nodpi"
+        drawable.mkdir(parents=True)
+        (drawable / "managed_brand_icon.png").write_bytes(data)
+        mipmap = resources / "mipmap-anydpi"
+        mipmap.mkdir()
+        base = root / "app/android/app/src/main/res/mipmap-anydpi"
+        for icon_res in base.glob("ic_launcher*.xml"):
+            (mipmap / icon_res.name).write_text(
+                '<bitmap xmlns:android="http://schemas.android.com/apk/res/android" '
+                'android:src="@drawable/managed_brand_icon" android:gravity="fill" />',
+                encoding="utf-8",
+            )
+        defines["AGENT_BRAND_ICON"] = "true"
+        defines["AGENT_ANDROID_ICON_RES"] = str(resources)
+        yield
+    finally:
+        flutter_asset.unlink()
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("config", type=Path)
     parser.add_argument("--abi", choices=("arm64", "x64"), default="arm64")
     parser.add_argument("--release", action="store_true")
+    parser.add_argument("--version", default="0.1.0")
+    parser.add_argument("--icon", type=Path, help="prepared PNG from the project brand")
     parser.add_argument("--check", action="store_true", help="validate the export without building")
     parser.add_argument("--flutter", default=shutil.which("flutter"))
     args = parser.parse_args()
@@ -59,18 +94,24 @@ def main():
     root = Path(__file__).resolve().parent.parent
     subprocess.run([sys.executable,
                     str(root / "tooling/check_runtime_bundle.py"), args.abi], cwd=root, check=True)
+    if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", args.version):
+        parser.error("Version must use major.minor.patch")
+    defines["DSH_APP_VERSION"] = args.version
     mode = "release" if args.release else "debug"
     if args.release:
         defines["AGENT_ANDROID_REQUIRE_SIGNING"] = "true"
     with tempfile.TemporaryDirectory(prefix="agent-mobile-brand-") as tmp:
-        path = Path(tmp) / "brand.json"
-        path.write_text(json.dumps(defines, ensure_ascii=False), encoding="utf-8")
-        platform = "android-x64" if args.abi == "x64" else "android-arm64"
-        subprocess.run(
-            [args.flutter, "build", "apk", f"--{mode}",
-             "--flavor", args.abi, "--target-platform", platform, f"--dart-define-from-file={path}"],
-            cwd=root / "app", check=True,
-        )
+        temporary = Path(tmp)
+        with staged_icon(root, args.icon, temporary, defines):
+            path = temporary / "brand.json"
+            path.write_text(json.dumps(defines, ensure_ascii=False), encoding="utf-8")
+            platform = "android-x64" if args.abi == "x64" else "android-arm64"
+            subprocess.run(
+                [args.flutter, "build", "apk", f"--{mode}",
+                 "--flavor", args.abi, "--target-platform", platform, "--build-name", args.version,
+                 f"--dart-define-from-file={path}"],
+                cwd=root / "app", check=True,
+            )
     metadata = root / "app/build/app/outputs/apk" / args.abi / mode / "output-metadata.json"
     if json.loads(metadata.read_text(encoding="utf-8"))["applicationId"] != defines["AGENT_ANDROID_APPLICATION_ID"]:
         raise RuntimeError("APK package does not match the exported project configuration")

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../managed/brand.dart';
 import '../../state/app_info.dart';
 import '../../state/star_prompt.dart' show starLinkOpenerProvider;
 import '../../state/update_state.dart';
@@ -36,7 +37,7 @@ class AboutPage extends ConsumerWidget {
     final colors = DshColors.of(context);
     final version = installedVersionLabel(ref);
     return AppPage.list(
-      title: l10n.hubAbout,
+      title: "${l10n.hubAbout} · ${AppInfo.name}",
       children: [
         SettingsSection(
           children: [
@@ -45,13 +46,14 @@ class AboutPage extends ConsumerWidget {
               value: Text(version, style: AppType.tabular(theme.textTheme.bodyMedium!)),
             ),
             const AppUpdateTiles(),
-            SettingsTile(
-              key: const ValueKey('settings-star'),
-              spot: Spots.star,
-              onTap: () => unawaited(
-                openStarProject(ProviderScope.containerOf(context, listen: false), ScaffoldMessenger.maybeOf(context)),
+            if (!ManagedBrand.isConfigured)
+              SettingsTile(
+                key: const ValueKey('settings-star'),
+                spot: Spots.star,
+                onTap: () => unawaited(
+                  openStarProject(ProviderScope.containerOf(context, listen: false), ScaffoldMessenger.maybeOf(context)),
+                ),
               ),
-            ),
             SettingsTile(
               spot: Spots.licenses,
               onTap: () => showLicensePage(
@@ -67,7 +69,7 @@ class AboutPage extends ConsumerWidget {
         SettingsSection(
           title: l10n.hubAboutAuthor,
           children: [
-            const SettingsTile(title: AppInfo.author),
+            const SettingsTile(title: 'dsh-Go · ccch1mneyyy'),
             _authorLink(
               context,
               ref,

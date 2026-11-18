@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../../managed/account_page.dart';
 import '../../managed/brand.dart';
+import '../../managed/session.dart';
+import '../../state/app_info.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
@@ -321,12 +323,13 @@ class SettingsScreen extends ConsumerWidget {
                 value: Text(l10n.askAiTooltip),
                 onTap: () => unawaited(askAi(context, AskAiTopic.overview)),
               ),
-            SettingsTile(
-              icon: AppIcons.community,
-              tint: SettingsHues.help,
-              spot: Spots.community,
-              onTap: () => _push(context, communityPage()),
-            ),
+            if (!ManagedBrand.isConfigured)
+              SettingsTile(
+                icon: AppIcons.community,
+                tint: SettingsHues.help,
+                spot: Spots.community,
+                onTap: () => _push(context, communityPage()),
+              ),
             SettingsTile(
               icon: AppIcons.diagnostics,
               tint: SettingsHues.help,
@@ -344,12 +347,6 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ],
         ),
-        if (ManagedBrand.isConfigured)
-          ListTile(
-            leading: const Icon(Icons.account_circle_outlined),
-            title: Text(Localizations.localeOf(context).languageCode == 'zh' ? '羽枢账号' : 'YushuHub account'),
-            onTap: () => _push(context, const ManagedAccountPage()),
-          ),
         Padding(
           padding: const EdgeInsets.only(top: 8),
           child: Center(child: BrandMark(size: 18, color: colors.textDisabled)),
@@ -402,7 +399,7 @@ class _SettingsOverviewState extends ConsumerState<SettingsOverview> {
     super.initState();
     // Opening settings counts as "open": refresh the balance (throttled).
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(balanceProvider.notifier).refresh();
+      if (mounted && !ManagedBrand.isConfigured) ref.read(balanceProvider.notifier).refresh();
     });
   }
 
@@ -411,6 +408,24 @@ class _SettingsOverviewState extends ConsumerState<SettingsOverview> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    if (ManagedBrand.isConfigured) {
+      final session = ref.watch(managedSessionProvider);
+      final engine = EngineStatusView.of(ref.watch(localRuntimeProvider));
+      return SpotAnchor(
+        spot: SettingsIndex.entry(SettingsPageId.account),
+        child: ValueListenableBuilder<bool>(
+          valueListenable: session.signedIn,
+          builder: (context, signedIn, _) => OverviewCard(
+            leading: const OverviewGlyph(AppIcons.profile),
+            title: Text(l10n.managedAccountTitle(AppInfo.name)),
+            subtitle: Text(signedIn ? l10n.managedAccountDetails : l10n.managedAccountSignInHint),
+            onTap: () => _push(const ManagedAccountPage()),
+            footer: OverviewFooter(tone: engine.tone, text: '${l10n.hubSettingsEngine} · ${engine.label}'),
+            onFooterTap: () => _push(const EngineScreen()),
+          ),
+        ),
+      );
+    }
     final account = ref.watch(accountProvider);
     final settings = ref.watch(settingsProvider);
     final balance = ref.watch(balanceProvider);
@@ -473,7 +488,6 @@ class _SettingsOverviewState extends ConsumerState<SettingsOverview> {
         title = l10n.hubSettingsSignInAccount;
         subtitle = l10n.hubSettingsOrApiKey;
     }
-    final dsh = runtime.status.dshVersion;
     // The card is 账号's way in (its title is whoever is signed in).
     return SpotAnchor(
       spot: SettingsIndex.entry(SettingsPageId.account),
@@ -494,7 +508,7 @@ class _SettingsOverviewState extends ConsumerState<SettingsOverview> {
         onTap: () => _push(hostLink != null ? const RemoteScreen() : const AccountPage()),
         footer: OverviewFooter(
           tone: engine.tone,
-          text: [l10n.hubSettingsEngine, engine.label, if (dsh != null) 'DSH $dsh'].join(' · '),
+          text: [l10n.hubSettingsEngine, engine.label].join(' · '),
         ),
         onFooterTap: () => _push(const EngineScreen()),
       ),

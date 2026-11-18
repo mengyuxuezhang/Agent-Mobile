@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../managed/brand.dart';
 import '../update/checker.dart';
 import '../update/downloader.dart';
 import '../update/installer.dart';
@@ -359,7 +360,10 @@ class AppUpdateController extends Notifier<AppUpdateState> {
         noticeOnly: true,
       );
     }
-    return AppUpdateState(current: AppVersion.tryParse(AppInfo.version) ?? const AppVersion(0, 0, 0));
+    return AppUpdateState(
+      current: AppVersion.tryParse(AppInfo.version) ?? const AppVersion(0, 0, 0),
+      installable: !ManagedBrand.isConfigured || ref.read(updateSourcesProvider).feed != null,
+    );
   }
 
   /// Completes once preferences, the installed version and startup cleanup are ready.
@@ -392,6 +396,10 @@ class AppUpdateController extends Notifier<AppUpdateState> {
       _userAgent = updaterUserAgent(version: name, build: app?.versionCode, abi: app?.androidAbi);
     }
     final current = AppVersion.tryParse(app?.versionName)?.withBuild(app?.versionCode) ?? state.current;
+    if (ManagedBrand.isConfigured && ref.read(updateSourcesProvider).feed == null) {
+      state = state.copyWith(loaded: true, current: current, installable: false);
+      return;
+    }
     final flavor = ApkFlavor.fromName(ref.read(updateFlavorNameProvider)) ?? ApkFlavor.fromAbi(app?.abi);
     ReleaseInfo? cached;
     try {

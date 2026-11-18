@@ -3,6 +3,7 @@ package io.github.ccch1mneyyy.dsh_app.media
 import android.Manifest
 import android.content.ContentValues
 import android.content.Context
+import io.github.ccch1mneyyy.dsh_app.i18n.AppStrings
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.MediaScannerConnection
@@ -50,6 +51,7 @@ class MediaPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandle
 
     private lateinit var methods: MethodChannel
     private lateinit var context: Context
+    private val album get() = AppStrings.appName(context).replace('/', '-').replace('\\', '-')
     private var activity: ActivityPluginBinding? = null
     private val permissions = MediaPermissionQueue()
     private val main = Handler(Looper.getMainLooper())
@@ -164,7 +166,7 @@ class MediaPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandle
                 val values = ContentValues().apply {
                     put(MediaStore.MediaColumns.DISPLAY_NAME, name)
                     put(MediaStore.MediaColumns.MIME_TYPE, mime)
-                    put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/$ALBUM")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_MOVIES}/$album")
                     put(MediaStore.Video.Media.DATE_TAKEN, System.currentTimeMillis())
                     put(MediaStore.MediaColumns.IS_PENDING, 1)
                 }
@@ -183,7 +185,7 @@ class MediaPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandle
                 val shown = resolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use {
                     if (it.moveToFirst()) it.getString(0) else null
                 } ?: name
-                return "${Environment.DIRECTORY_MOVIES}/$ALBUM/$shown"
+                return "${Environment.DIRECTORY_MOVIES}/$album/$shown"
             } catch (e: SecurityException) {
                 if (!canWriteShared()) throw MediaError("permission", e.message)
             } catch (e: IOException) {
@@ -191,11 +193,11 @@ class MediaPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandle
             }
         }
         if (!canWriteShared()) throw MediaError("permission", "storage permission denied")
-        val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), ALBUM).apply { mkdirs() }
+        val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES), album).apply { mkdirs() }
         if (!dir.isDirectory) throw IOException("cannot create video album")
         val target = writeUnique(dir, name) { output -> source.inputStream().use { it.copyTo(output) } }
         MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), arrayOf(mime), null)
-        return "${Environment.DIRECTORY_MOVIES}/$ALBUM/${target.name}"
+        return "${Environment.DIRECTORY_MOVIES}/$album/${target.name}"
     }
 
     private fun ask(result: MethodChannel.Result, owner: Any, then: () -> Unit) {
@@ -232,11 +234,11 @@ class MediaPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandle
         }
         if (!canWriteShared()) throw MediaError("permission", "storage permission denied")
         val pictures = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
-        val dir = File(pictures, ALBUM).apply { mkdirs() }
+        val dir = File(pictures, album).apply { mkdirs() }
         if (!dir.isDirectory) throw IOException("cannot create $dir")
         val target = writeUnique(dir, name, bytes)
         MediaScannerConnection.scanFile(context, arrayOf(target.absolutePath), arrayOf(mime), null)
-        return "${Environment.DIRECTORY_PICTURES}/$ALBUM/${target.name}"
+        return "${Environment.DIRECTORY_PICTURES}/$album/${target.name}"
     }
 
     private fun saveToMediaStore(bytes: ByteArray, name: String, mime: String): String {
@@ -245,7 +247,7 @@ class MediaPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandle
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, name)
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
-            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$ALBUM")
+            put(MediaStore.MediaColumns.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/$album")
             // Galleries sort by when a picture was taken: put it with today's.
             put(MediaStore.Images.Media.DATE_TAKEN, now)
             put(MediaStore.MediaColumns.IS_PENDING, 1)
@@ -265,7 +267,7 @@ class MediaPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandle
         val shown = resolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use {
             if (it.moveToFirst()) it.getString(0) else null
         } ?: name
-        return "${Environment.DIRECTORY_PICTURES}/$ALBUM/$shown"
+        return "${Environment.DIRECTORY_PICTURES}/$album/$shown"
     }
 
     private fun canWriteShared(): Boolean {
@@ -299,7 +301,6 @@ class MediaPlugin : FlutterPlugin, ActivityAware, MethodChannel.MethodCallHandle
 
         /** The gallery album: `Pictures/DSH Go`, the app's name as galleries show it (downloads go to
          *  `Download/DSH-Go`, a path the agent types). */
-        private const val ALBUM = "DSH Go"
         private const val STORAGE_REQUEST = 0x5d7
 
         /** Own the chosen name before writing; another save must choose its own target. */

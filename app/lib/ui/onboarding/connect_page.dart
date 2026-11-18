@@ -8,6 +8,7 @@ import '../../managed/account_page.dart';
 import '../../managed/brand.dart';
 import '../../runtime/runtime_state.dart';
 import '../../state/account_state.dart';
+import '../../state/app_info.dart';
 import '../../state/onboarding_state.dart';
 import '../account/account_widgets.dart';
 import '../common/progress_halo.dart';
@@ -177,6 +178,22 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (ManagedBrand.isConfigured) {
+      final l10n = context.l10n;
+      return OnboardingScaffold(
+        children: [
+          const Spacer(),
+          OnboardingHeader(
+            icon: AppIcons.account,
+            title: l10n.managedAccountTitle(AppInfo.name),
+            message: l10n.managedAccountSignInHint,
+          ),
+          const Spacer(),
+          FilledButton(onPressed: _managedAccount, child: Text(l10n.managedSignIn)),
+          TextButton(onPressed: _skip, child: Text(l10n.shellSetUpLater)),
+        ],
+      );
+    }
     ref.listen(accountProvider.select((s) => s.signedIn), (prev, signedIn) {
       if (signedIn && prev == false) _onSignedIn();
     });
@@ -203,7 +220,6 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
           setState(() => _keyEntry = true);
         },
         onOther: _otherProvider,
-        onManagedAccount: ManagedBrand.isConfigured ? _managedAccount : null,
         onSkip: _skip,
       );
     }
@@ -236,7 +252,6 @@ class _Choose extends StatelessWidget {
     required this.onSignIn,
     required this.onApiKey,
     required this.onOther,
-    this.onManagedAccount,
     required this.onSkip,
   });
 
@@ -244,7 +259,6 @@ class _Choose extends StatelessWidget {
   final VoidCallback onSignIn;
   final VoidCallback onApiKey;
   final VoidCallback onOther;
-  final VoidCallback? onManagedAccount;
   final VoidCallback onSkip;
 
   @override
@@ -267,13 +281,6 @@ class _Choose extends StatelessWidget {
         if (state.failure case final failure?) ...[const SizedBox(height: 16), SignInFailureCard(failure: failure)],
         const Spacer(flex: 2),
         const SizedBox(height: 24),
-        if (onManagedAccount != null) ...[
-          FilledButton(
-            onPressed: onManagedAccount,
-            child: Text(Localizations.localeOf(context).languageCode == 'zh' ? '使用羽枢账号' : 'Use a YushuHub account'),
-          ),
-          const SizedBox(height: 10),
-        ],
         if (unsupported)
           Padding(
             padding: const EdgeInsets.only(bottom: 12),

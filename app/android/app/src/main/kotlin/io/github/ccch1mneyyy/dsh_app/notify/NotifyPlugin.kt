@@ -110,7 +110,7 @@ class NotifyPlugin :
                         group = group,
                         key = key,
                         attention = call.argument<Boolean>("attention") == true,
-                        title = call.argument<String>("title") ?: AppStrings.APP_NAME,
+                        title = call.argument<String>("title") ?: AppStrings.appName(appContext),
                         text = call.argument<String>("text") ?: "",
                         publicText = call.argument<String>("publicText") ?: AppStrings.get(appContext, R.string.notify_new_reminder),
                         sessionId = sessionId,

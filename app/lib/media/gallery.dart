@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../l10n/l10n.dart';
+import '../state/app_info.dart';
 import '../state/attachments.dart' show inlineImageType;
 
 /// The native side (`dsh/media`).
@@ -25,12 +26,12 @@ class MediaChannel {
   /// (`Pictures/DSH Go/chart.png`).
   Future<String> saveImage(Uint8List bytes, {required String name, required String mime}) async =>
       await channel.invokeMethod<String>('saveImage', {'bytes': bytes, 'name': name, 'mime': mime}) ??
-      'Pictures/DSH Go/$name';
+      'Pictures/${AppInfo.name}/$name';
 
   /// Streams an already materialized local video into the gallery.
   Future<String> saveVideoFile(String path, {required String name}) async =>
       await channel.invokeMethod<String>('saveVideoFile', {'path': path, 'name': name}) ??
-      'Movies/DSH Go/$name';
+      'Movies/${AppInfo.name}/$name';
 
   /// The app's page in system settings (storage was refused for good).
   Future<bool> openSettings() async => await channel.invokeMethod<bool>('openSettings') ?? false;

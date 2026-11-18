@@ -94,11 +94,11 @@ class ChatNotifier(private val app: Context) {
         val public = Notification.Builder(app, channel)
             .setSmallIcon(R.drawable.ic_stat_dsh)
             .setColor(ThemeAccent.notificationColor(app))
-            .setContentTitle(AppStrings.APP_NAME)
+            .setContentTitle(AppStrings.appName(app))
             .setContentText(post.publicText)
             .build()
         val (title, text) = when {
-            locked -> AppStrings.APP_NAME to post.publicText
+            locked -> AppStrings.appName(app) to post.publicText
             processing -> post.title to AppStrings.get(app, R.string.notify_action_processing)
             else -> post.title to post.text
         }
@@ -136,7 +136,7 @@ class ChatNotifier(private val app: Context) {
             if (locked) deferred[tag to id] = post to postedAt else deferred.remove(tag to id)
         }
         if (locked) watchUnlock()
-        summaries[tag] = (if (locked) AppStrings.APP_NAME else post.title) to channel
+        summaries[tag] = (if (locked) AppStrings.appName(app) else post.title) to channel
         // The new child may not be listed yet: count it explicitly.
         updateSummary(tag, children(tag, exclude = id) + 1)
     }
@@ -269,13 +269,13 @@ class ChatNotifier(private val app: Context) {
         val public = Notification.Builder(app, channel)
             .setSmallIcon(R.drawable.ic_stat_dsh)
             .setColor(ThemeAccent.notificationColor(app))
-            .setContentTitle(AppStrings.APP_NAME)
+            .setContentTitle(AppStrings.appName(app))
             .setContentText(AppStrings.plural(app, R.plurals.notify_reminders, count, count))
             .build()
         val summary = Notification.Builder(app, channel)
             .setSmallIcon(R.drawable.ic_stat_dsh)
             .setColor(ThemeAccent.notificationColor(app))
-            .setContentTitle(if (keyguard.isKeyguardLocked) AppStrings.APP_NAME else title)
+            .setContentTitle(if (keyguard.isKeyguardLocked) AppStrings.appName(app) else title)
             .setContentText(AppStrings.plural(app, R.plurals.notify_reminder_count, count, count))
             .setGroup(tag)
             .setGroupSummary(true)
@@ -369,7 +369,7 @@ class ChatNotifier(private val app: Context) {
         val builder = Notification.Builder(app, CHANNEL_ATTENTION)
             .setSmallIcon(R.drawable.ic_stat_dsh)
             .setColor(ThemeAccent.notificationColor(app))
-            .setContentTitle(if (keyguard.isKeyguardLocked) AppStrings.APP_NAME else post?.title ?: AppStrings.APP_NAME)
+            .setContentTitle(if (keyguard.isKeyguardLocked) AppStrings.appName(app) else post?.title ?: AppStrings.appName(app))
             .setContentText(text)
             .setOnlyAlertOnce(true)
             .setAutoCancel(true)

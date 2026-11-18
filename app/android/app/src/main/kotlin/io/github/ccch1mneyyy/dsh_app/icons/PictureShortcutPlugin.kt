@@ -63,7 +63,7 @@ class PictureShortcutPlugin : FlutterPlugin, MethodChannel.MethodCallHandler {
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "pin" -> {
-                val label = PictureShortcuts.label(call.argument<String>("label"))
+                val label = PictureShortcuts.label(call.argument<String>("label"), context.applicationInfo.loadLabel(context.packageManager).toString())
                 val png = call.argument<ByteArray>("png")
                 if (png == null || png.isEmpty() || png.size > PictureShortcuts.MAX_PNG_BYTES) {
                     result.error("invalid", "no picture", null)
@@ -124,9 +124,9 @@ internal object PictureShortcuts {
     /** Each picture is its own shortcut (pinning another doesn't replace the first). */
     fun id(now: Long) = "$PREFIX$now"
 
-    fun label(raw: String?): String {
+    fun label(raw: String?, fallback: String = "Agent Mobile"): String {
         val clean = raw.orEmpty().replace(Regex("\\s+"), " ").trim()
-        if (clean.isEmpty()) return "DSH Go"
+        if (clean.isEmpty()) return fallback
         return if (clean.codePointCount(0, clean.length) <= MAX_LABEL) clean
         else clean.substring(0, clean.offsetByCodePoints(0, MAX_LABEL))
     }

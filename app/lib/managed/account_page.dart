@@ -5,9 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
+import '../state/app_info.dart';
 import '../state/models_state.dart';
 import '../state/providers_state.dart';
 import 'client.dart';
+import 'membership_page.dart';
+import 'registration_page.dart';
 import 'session.dart';
 
 class ManagedAccountPage extends ConsumerStatefulWidget {
@@ -57,7 +61,10 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
       }
       if (!mounted) return;
       setState(() {
-        _error = error is ManagedApiError && error.status == 429 ? '操作过于频繁，请稍后再试。' : '请求未完成，请检查输入或网络后重试。';
+        final l10n = context.l10n;
+        _error = error is ManagedApiError && error.status == 429
+            ? l10n.managedTooManyRequests
+            : l10n.managedRequestFailed;
       });
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -110,11 +117,32 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
     if (mounted && _token == token) setState(() => _snapshot = snapshot);
   }
 
+  Future<void> _openRegistration() async {
+    final token = await Navigator.of(context)
+        .push<String>(MaterialPageRoute(builder: (context) => ManagedRegistrationPage(client: _client)));
+    if (!mounted || token == null) return;
+    _password.clear();
+    _answer.clear();
+    setState(() => _session.token = token);
+    await _run(_refresh);
+  }
+
+  Future<void> _openMembership(String userId) async {
+    final token = _token;
+    if (token == null) return;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (context) => ManagedMembershipPage(client: _client, token: token, userId: userId),
+      ),
+    );
+    if (mounted && _token == token) await _run(_refresh);
+  }
+
   Future<void> _connectModels() async {
     final engine = ref.read(providerBackendProvider);
     final catalog = _snapshot?[2];
     if (engine == null || !engine.isLocal || catalog == null) {
-      setState(() => _error = '请先启动本机引擎，再连接羽枢模型。');
+      setState(() => _error = context.l10n.managedLocalEngineRequired);
       return;
     }
     await _session.connectModels(engine, catalog);
@@ -145,13 +173,14 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final snapshot = _snapshot;
     final user = snapshot?.first['user'];
     final membership = user is JsonObject ? user['membership'] : null;
     final models = snapshot?[2]['models'];
     final ledger = snapshot?[3]['items'];
     return Scaffold(
-      appBar: AppBar(title: const Text('羽枢账号')),
+      appBar: AppBar(title: Text(l10n.managedAccountTitle(AppInfo.name))),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
@@ -162,46 +191,55 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
               TextField(
                 controller: _username,
                 enabled: !_busy,
-                decoration: const InputDecoration(labelText: '账号'),
+                decoration: InputDecoration(labelText: l10n.managedUsername),
               ),
               TextField(
                 controller: _password,
                 enabled: !_busy,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: '密码'),
+                decoration: InputDecoration(labelText: l10n.managedPassword),
               ),
               if (_captcha case final bytes?) SvgPicture.memory(bytes, height: 48),
-              TextButton(onPressed: _busy ? null : () => _run(_loadCaptcha), child: const Text('刷新验证码')),
+              TextButton(onPressed: _busy ? null : () => _run(_loadCaptcha), child: Text(l10n.managedRefreshCaptcha)),
               TextField(
                 controller: _answer,
                 enabled: !_busy,
-                decoration: const InputDecoration(labelText: '图形验证码'),
+                decoration: InputDecoration(labelText: l10n.managedCaptcha),
               ),
-              FilledButton(onPressed: _busy ? null : () => _run(_signIn), child: const Text('登录')),
+              FilledButton(onPressed: _busy ? null : () => _run(_signIn), child: Text(l10n.managedSignIn)),
+              TextButton(onPressed: _busy ? null : _openRegistration, child: Text(l10n.managedRegister)),
             ] else ...[
               if (user is JsonObject) ...[
-                Text('账号：${user['displayName'] ?? user['username'] ?? '—'}'),
-                Text('会员：${membership is JsonObject ? membership['cardName'] ?? '—' : '—'}'),
-                Text('积分：${snapshot?[1]['creditBalance'] ?? user['creditBalance'] ?? '—'}'),
+                Text(l10n.managedAccountValue('${user['displayName'] ?? user['username'] ?? '—'}')),
+                Text(l10n.managedMembershipValue('${membership is JsonObject ? membership['cardName'] ?? '—' : '—'}')),
+                Text(l10n.managedCreditValue('${snapshot?[1]['creditBalance'] ?? user['creditBalance'] ?? '—'}')),
+                if (user['id'] is String)
+                  OutlinedButton(
+                    onPressed: _busy ? null : () => _openMembership(user['id'] as String),
+                    child: Text(l10n.managedMembershipStore),
+                  ),
               ],
               if (models is List) ...[
                 const SizedBox(height: 16),
-                const Text('已授权模型'),
+                Text(l10n.managedAuthorizedModels),
                 for (final model in models.whereType<JsonObject>()) Text('${model['name'] ?? model['id'] ?? '—'}'),
               ],
               if (snapshot != null)
-                FilledButton(onPressed: _busy ? null : () => _run(_connectModels), child: const Text('连接羽枢模型到本机引擎')),
-              if (_session.modelsConnected) const Text('已连接。返回聊天，在模型列表中选择 YushuHub。'),
+                FilledButton(
+                  onPressed: _busy ? null : () => _run(_connectModels),
+                  child: Text(l10n.managedConnectModels),
+                ),
+              if (_session.modelsConnected) Text(l10n.managedModelsConnected),
               if (ledger is List && ledger.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                const Text('最近积分流水'),
+                Text(l10n.managedRecentCredits),
                 for (final row in ledger.whereType<JsonObject>().take(5))
                   Text(
                     '${row['createdAt'] ?? ''}  ${row['modelName'] ?? row['changeType'] ?? ''}  ${row['pointsDelta'] ?? '—'}',
                   ),
               ],
-              TextButton(onPressed: _busy ? null : () => _run(_refresh), child: const Text('刷新权益')),
-              TextButton(onPressed: _busy ? null : () => _run(_signOut), child: const Text('退出登录')),
+              TextButton(onPressed: _busy ? null : () => _run(_refresh), child: Text(l10n.managedRefreshBenefits)),
+              TextButton(onPressed: _busy ? null : () => _run(_signOut), child: Text(l10n.managedSignOut)),
             ],
           ],
         ),

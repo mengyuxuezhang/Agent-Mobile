@@ -87,7 +87,7 @@
   "companionMemoryEmpty": "Nothing saved yet",
   "companionMemoryEmptyHint": "Write down what you'd like her to remember. It stays on the current host, and you can edit or delete it anytime.",
   "companionMemoryUnsupported": "This host can't keep her memories yet",
-  "companionMemoryUnsupportedHint": "It isn't available over the DSH Remote relay, or this host's dsh-go bridge is older.",
+  "companionMemoryUnsupportedHint": "It isn't available over the DSH Remote relay, or this host's this app bridge is older.",
   "companionMemoryLoadFailed": "Couldn't load",
   "companionMemoryRetry": "Retry",
   "companionMemoryConflict": "It was just changed elsewhere, so it's been refreshed",

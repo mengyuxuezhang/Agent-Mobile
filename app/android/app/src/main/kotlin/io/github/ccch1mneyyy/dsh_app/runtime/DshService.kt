@@ -254,7 +254,7 @@ class DshService : Service() {
         private fun buildInstallNotification(context: Context, upgrade: Boolean, percent: Int): Notification =
             Notification.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.ic_stat_dsh)
-                .setContentTitle(AppStrings.APP_NAME)
+                .setContentTitle(AppStrings.appName(context))
                 .setContentText(if (upgrade) AppStrings.get(context, R.string.service_updating) else AppStrings.get(context, R.string.service_preparing))
                 .setProgress(100, percent.coerceAtLeast(0), percent < 0)
                 .setContentIntent(openApp(context, NOTIFICATION_ID))
@@ -348,7 +348,7 @@ class DshService : Service() {
             if (voice != null) builder.setOnlyAlertOnce(true)
             return builder
                 .setSmallIcon(R.drawable.ic_stat_dsh)
-                .setContentTitle(AppStrings.APP_NAME)
+                .setContentTitle(AppStrings.appName(context))
                 .setContentText(phoneLine ?: voice ?: text)
                 .setOngoing(true)
                 .setContentIntent(open)

@@ -92,6 +92,10 @@ android {
     }
 
     sourceSets {
+        flutterDefines["AGENT_ANDROID_ICON_RES"]?.let { directory ->
+            getByName("debug").res.srcDir(directory)
+            getByName("release").res.srcDir(directory)
+        }
         getByName("main") {
             jniLibs.srcDir(File(tawcrootOut, "jniLibs"))
         }

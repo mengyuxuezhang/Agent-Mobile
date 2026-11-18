@@ -1,5 +1,5 @@
 {
-  "stateDiagnosticsSubject": "DSH Go diagnostics bundle",
+  "stateDiagnosticsSubject": "This app diagnostics bundle",
   "stateStoragePermission": "No storage permission to save to Downloads",
   "stateDiagnosticsStorageFull": "Not enough storage to create the diagnostics bundle",
   "stateDiagnosticsExportFailed": "Couldn’t export diagnostics bundle",
@@ -375,7 +375,7 @@
   "stateUiWeb": "Web",
   "statePluginRegistryProgressUnknown": "Downloading from {registry} (registry {attempt}/null)",
   "stateProviderTokenCountInvalid": "Enter a number, like 128K",
-  "appSlogan": "Anytime, anywhere. Just Go!",
+  "appSlogan": "Your mobile AI workspace",
   "statePasteEmpty": "The clipboard has no text to paste.",
   "statePasteDenied": "Paste was not authorized. Tap the Paste button again.",
   "statePasteBusy": "The paste window is still active or closing. Finish or cancel it, then try again.",

@@ -3,6 +3,7 @@
 // build time (replay_viewer.g.dart); the conversation file goes inside it as
 // JSON.
 
+import '../state/app_info.dart';
 import 'replay_viewer.g.dart';
 
 /// MIME type of the exported page.
@@ -21,7 +22,7 @@ String conversationHtml(String fileText, {required String title}) {
       .replaceAll('\u2028', r'\u2028')
       .replaceAll('\u2029', r'\u2029');
   return replayViewerPage
-      .replaceFirst('__DSHGO_TITLE__', '${_escape(title)} · DSH Go')
+      .replaceFirst('__DSHGO_TITLE__', '${_escape(title)} · ${_escape(AppInfo.name)}')
       .replaceFirst('__DSHGO_DATA__', data);
 }
 

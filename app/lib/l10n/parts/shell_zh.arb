@@ -61,7 +61,7 @@
     }
   },
   "shellEngineLogs": "引擎日志",
-  "shellWelcomeMessage": "把 DeepSeek 智能体\n装进口袋",
+  "shellWelcomeMessage": "你的移动 AI 助手",
   "shellGetStarted": "开始",
   "shellSearchChats": "搜索对话",
   "shellCollapseChatList": "收起对话列表",
@@ -317,7 +317,7 @@
   "shellEarlier": "更早",
   "shellSeatNative": "原生",
   "shellSeatIsland": "内嵌网页",
-  "shellSeatWeb": "网页版打开",
+  "shellSeatWeb": "打开引擎网页版",
   "shellPlugins": "插件",
   "shellHeaderActions": "顶栏按钮",
   "shellAllHidden": "全部隐藏",
@@ -496,7 +496,7 @@
   "shellJsonStringNewline": "字符串里不能直接换行",
   "shellJsonControlCharacter": "字符串里有控制字符",
   "shellJsonBadNumber": "数字格式不对",
-  "shellSkillInstallPrompt": "请在这台主机上安装 DSH Go 的界面技能 {skill}：",
+  "shellSkillInstallPrompt": "请在这台主机上安装 本应用 的界面技能 {skill}：",
   "@shellSkillInstallPrompt": {
     "placeholders": {
       "skill": {

@@ -120,7 +120,7 @@ class EngineScreen extends ConsumerWidget {
         // Leading letters keep the figures whole (a bare number would be read
         // as "number + unit").
         stats: [
-          (status.dshVersion == null ? '—' : 'v${status.dshVersion}', 'DSH'),
+          (status.dshVersion == null ? '—' : 'v${status.dshVersion}', l10n.hubSettingsEngine),
           (status.nodeVersion == null ? '—' : 'v${status.nodeVersion}', 'Node.js'),
         ],
       ),

@@ -122,7 +122,7 @@
   "companionMemoryEmpty": "还没有记下什么",
   "companionMemoryEmptyHint": "想让她记住的事，可以在这里写下来。只存在当前主机上，随时能改能删。",
   "companionMemoryUnsupported": "这台主机还不能保存她的记忆",
-  "companionMemoryUnsupportedHint": "经 DSH Remote 中继连接时用不了，或者这台主机的 dsh-go 桥接比较旧。",
+  "companionMemoryUnsupportedHint": "经 DSH Remote 中继连接时用不了，或者这台主机的 本应用 桥接比较旧。",
   "companionMemoryLoadFailed": "没读到",
   "companionMemoryRetry": "重试",
   "companionMemoryConflict": "刚才另一处改过了，已经刷新",

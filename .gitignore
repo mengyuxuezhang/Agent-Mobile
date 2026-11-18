@@ -44,3 +44,6 @@ site/build/
 runtime/ohos/process/build/
 # NodeMobile, the runtime archive and addon sources: tooling/ios/prepare-engine.sh
 app/ios/Engine/
+
+# Brand image staged only during the Android build
+/app/assets/managed-brand/icon.png

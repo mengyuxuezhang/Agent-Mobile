@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../managed/account_page.dart';
+import '../../managed/brand.dart';
 import '../../state/account_state.dart';
 import '../../state/settings_state.dart';
 import '../chat/balance_widgets.dart' show BalanceSettingsLine;
@@ -21,14 +23,23 @@ import '../common/brief_notice.dart';
 
 /// 账号: the DeepSeek account of the on-device engine (profile, wallets, top-up,
 /// sign-out; the browser sign-in otherwise) and the API Key, the other way in.
-class AccountPage extends ConsumerStatefulWidget {
+class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
 
   @override
-  ConsumerState<AccountPage> createState() => _AccountPageState();
+  Widget build(BuildContext context) => ManagedBrand.isConfigured
+      ? const ManagedAccountPage()
+      : const _ProviderAccountPage();
 }
 
-class _AccountPageState extends ConsumerState<AccountPage> {
+class _ProviderAccountPage extends ConsumerStatefulWidget {
+  const _ProviderAccountPage();
+
+  @override
+  ConsumerState<_ProviderAccountPage> createState() => _AccountPageState();
+}
+
+class _AccountPageState extends ConsumerState<_ProviderAccountPage> {
   late final AppLifecycleListener _lifecycle;
 
   /// A Platform page (top-up, usage) was opened: re-read wallets on return.

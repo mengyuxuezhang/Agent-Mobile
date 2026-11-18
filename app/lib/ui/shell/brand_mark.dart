@@ -16,6 +16,15 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (color == null && const bool.fromEnvironment('AGENT_BRAND_ICON')) {
+      return Image.asset(
+        'assets/managed-brand/icon.png',
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        semanticLabel: AppInfo.name,
+      );
+    }
     final scheme = Theme.of(context).colorScheme;
     const primaryHex = String.fromEnvironment('AGENT_BRAND_PRIMARY');
     final colorValue = RegExp(r'^#[a-fA-F0-9]{6}$').hasMatch(primaryHex) ? int.parse(primaryHex.substring(1), radix: 16) : null;

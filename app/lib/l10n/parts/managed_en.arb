@@ -1,0 +1,81 @@
+{
+  "managedAccountTitle": "{brand} account",
+  "managedAccountSignInHint": "Use the same account as the desktop app",
+  "managedAccountDetails": "Membership, credits and models",
+  "managedSignIn": "Sign in",
+  "@managedAccountTitle": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      }
+    }
+  },
+  "managedUsername": "Username",
+  "managedPassword": "Password",
+  "managedRefreshCaptcha": "Refresh verification image",
+  "managedCaptcha": "Verification code",
+  "managedAccountValue": "Account: {value}",
+  "@managedAccountValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "managedMembershipValue": "Membership: {value}",
+  "@managedMembershipValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "managedCreditValue": "Credits: {value}",
+  "@managedCreditValue": {
+    "placeholders": {
+      "value": {
+        "type": "String"
+      }
+    }
+  },
+  "managedAuthorizedModels": "Available models",
+  "managedConnectModels": "Connect account models to the local engine",
+  "managedModelsConnected": "Connected. Your account models are available in the chat model selector.",
+  "managedRecentCredits": "Recent credit activity",
+  "managedRefreshBenefits": "Refresh account details",
+  "managedSignOut": "Sign out",
+  "managedTooManyRequests": "Too many requests. Try again later.",
+  "managedRequestFailed": "Check your information and network connection, then try again.",
+  "managedLocalEngineRequired": "Start the local engine before connecting your account models.",
+  "managedRegister": "Create an account",
+  "managedRegistrationIntro": "Use this account on both mobile and desktop.",
+  "managedRegistrationEmail": "Email",
+  "managedRegistrationSendCode": "Send email code",
+  "managedRegistrationEmailCode": "Email verification code",
+  "managedRegistrationSent": "Check your email for the verification code.",
+  "managedRegistrationIdentity": "Enter a valid email and a username of 3–120 characters.",
+  "managedRegistrationCodeAndPassword": "Enter the six-digit code sent to this email and a password of at least six characters.",
+  "managedRegistrationExists": "This username or email is already registered. Sign in with your existing account.",
+  "managedRegistrationMailUnavailable": "Email verification is unavailable. Contact your administrator.",
+  "managedRegistrationDisabled": "This project requires an administrator to create accounts.",
+  "managedMembershipStore": "Membership plans",
+  "managedMembershipExpiry": "Expires {date}",
+  "@managedMembershipExpiry": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "managedMembershipDays": "{days} days",
+  "@managedMembershipDays": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "managedMembershipEmpty": "There are no plans available right now.",
+  "managedDesktopPaymentGuide": "Sign in with the same account on your computer and open Account → Buy membership. After payment, refresh here to see your updated membership.",
+  "managedMembershipPaymentUnavailable": "Online payment is currently unavailable for this project."
+}

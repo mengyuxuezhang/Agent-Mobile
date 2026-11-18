@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:dsh_client/dsh_client.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
@@ -21,7 +22,13 @@ class ManagedSession {
   late final client = ManagedClient(_transport, appVersion: AppInfo.version);
   static const modelRoute = 'yushuhub-managed';
   static final _keyRef = deriveProviderKeyRef(modelRoute);
-  String? token;
+  String? _token;
+  final signedIn = ValueNotifier(false);
+  String? get token => _token;
+  set token(String? value) {
+    _token = value;
+    signedIn.value = value != null;
+  }
   ManagedModelGateway? _gateway;
   ProviderBackend? _engine;
   bool get modelsConnected => _gateway != null;
@@ -100,7 +107,8 @@ class ManagedSession {
   }
 
   void dispose() {
-    token = null;
+    _token = null;
+    signedIn.dispose();
     _transport.close();
     final gateway = _gateway;
     _gateway = null;
