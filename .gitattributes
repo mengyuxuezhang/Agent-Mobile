@@ -1,2 +1,5 @@
 # Nested patches are applied to upstream sources byte for byte; never convert their line endings.
 tooling/ios/phone-self-runner/*.patch -text
+
+# Flutter regenerates these files with native line endings during APK builds.
+app/lib/l10n/gen/*.dart text eol=lf
