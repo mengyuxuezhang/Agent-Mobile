@@ -10799,7 +10799,7 @@ abstract class L10n {
   /// No description provided for @desktopRemotePairInstructions.
   ///
   /// In zh, this message translates to:
-  /// **'在电脑托盘打开「手机远程协作」，扫描二维码或输入显示的配对码。'**
+  /// **'在电脑端打开「手机端 → 连接手机」，扫描配对二维码或输入配对码。'**
   String get desktopRemotePairInstructions;
 
   /// No description provided for @desktopRemoteScan.
@@ -10999,6 +10999,138 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'这个会话在电脑上使用全开权限。确认后会同步切换为默认权限，再从手机继续。'**
   String get desktopRemoteDefaultPermissionsDescription;
+
+  /// No description provided for @desktopRemoteOptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'会话选项'**
+  String get desktopRemoteOptions;
+
+  /// No description provided for @desktopRemoteModel.
+  ///
+  /// In zh, this message translates to:
+  /// **'模型'**
+  String get desktopRemoteModel;
+
+  /// No description provided for @desktopRemoteExpert.
+  ///
+  /// In zh, this message translates to:
+  /// **'专家'**
+  String get desktopRemoteExpert;
+
+  /// No description provided for @desktopRemoteMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'模式'**
+  String get desktopRemoteMode;
+
+  /// No description provided for @desktopRemoteSkills.
+  ///
+  /// In zh, this message translates to:
+  /// **'技能'**
+  String get desktopRemoteSkills;
+
+  /// No description provided for @desktopRemoteNoSkills.
+  ///
+  /// In zh, this message translates to:
+  /// **'此工作区没有可选技能'**
+  String get desktopRemoteNoSkills;
+
+  /// No description provided for @desktopRemoteNormalMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'默认模式'**
+  String get desktopRemoteNormalMode;
+
+  /// No description provided for @desktopRemotePlanMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'计划模式'**
+  String get desktopRemotePlanMode;
+
+  /// No description provided for @desktopRemoteAskMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'问答模式'**
+  String get desktopRemoteAskMode;
+
+  /// No description provided for @desktopRemoteGoalMode.
+  ///
+  /// In zh, this message translates to:
+  /// **'目标模式'**
+  String get desktopRemoteGoalMode;
+
+  /// No description provided for @desktopRemoteUseDefault.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用桌面端默认设置'**
+  String get desktopRemoteUseDefault;
+
+  /// No description provided for @desktopRemoteApplyOptions.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认选择'**
+  String get desktopRemoteApplyOptions;
+
+  /// No description provided for @desktopRemoteFullAccess.
+  ///
+  /// In zh, this message translates to:
+  /// **'完全允许（本会话）'**
+  String get desktopRemoteFullAccess;
+
+  /// No description provided for @desktopRemoteFullAccessHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'启用后，本会话的后续操作可自动允许。'**
+  String get desktopRemoteFullAccessHint;
+
+  /// No description provided for @desktopRemoteAllowOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'允许本次'**
+  String get desktopRemoteAllowOnce;
+
+  /// No description provided for @desktopRemoteRejectOnce.
+  ///
+  /// In zh, this message translates to:
+  /// **'拒绝本次'**
+  String get desktopRemoteRejectOnce;
+
+  /// No description provided for @desktopRemoteApprovePlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'确认计划'**
+  String get desktopRemoteApprovePlan;
+
+  /// No description provided for @desktopRemoteAbandonPlan.
+  ///
+  /// In zh, this message translates to:
+  /// **'放弃计划'**
+  String get desktopRemoteAbandonPlan;
+
+  /// No description provided for @desktopRemotePauseGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂停目标'**
+  String get desktopRemotePauseGoal;
+
+  /// No description provided for @desktopRemoteResumeGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'恢复目标'**
+  String get desktopRemoteResumeGoal;
+
+  /// No description provided for @desktopRemoteExitGoal.
+  ///
+  /// In zh, this message translates to:
+  /// **'退出目标'**
+  String get desktopRemoteExitGoal;
+
+  /// No description provided for @desktopRemoteMessageTooLong.
+  ///
+  /// In zh, this message translates to:
+  /// **'消息不能超过 16,000 个字符。'**
+  String get desktopRemoteMessageTooLong;
 
   /// No description provided for @automaticDiagnosticsRecover.
   ///
@@ -29981,7 +30113,7 @@ abstract class L10n {
   /// No description provided for @remoteHostsIntro.
   ///
   /// In zh, this message translates to:
-  /// **'在手机上接着用电脑或服务器上的 DSH'**
+  /// **'在手机上继续使用桌面端，或通过 SSH 连接服务器'**
   String get remoteHostsIntro;
 
   /// No description provided for @remoteSshHosts.
@@ -29993,7 +30125,7 @@ abstract class L10n {
   /// No description provided for @remoteSshRequirements.
   ///
   /// In zh, this message translates to:
-  /// **'需要那台主机开着 SSH，并装好 DSH'**
+  /// **'请在主机上启用 SSH，并安装兼容的运行引擎'**
   String get remoteSshRequirements;
 
   /// No description provided for @remoteAddSshHost.
@@ -30287,7 +30419,7 @@ abstract class L10n {
   /// No description provided for @remoteSshHostIntro.
   ///
   /// In zh, this message translates to:
-  /// **'连接你电脑或服务器上的 DSH'**
+  /// **'通过 SSH 连接电脑或服务器'**
   String get remoteSshHostIntro;
 
   /// No description provided for @remoteHostBasicInfo.
@@ -30965,7 +31097,7 @@ abstract class L10n {
   /// No description provided for @remoteSshInstallCommand.
   ///
   /// In zh, this message translates to:
-  /// **'还没装 DSH？在主机上运行 {command}'**
+  /// **'如需安装运行引擎，请在主机上运行 {command}'**
   String remoteSshInstallCommand(String command);
 
   /// Under the DSH Remote card; project is the upstream GitHub project (liguobao/ds-harness-remote), drawn as a link.
@@ -31229,7 +31361,7 @@ abstract class L10n {
   /// No description provided for @remoteCompactHistoryHint.
   ///
   /// In zh, this message translates to:
-  /// **'支持的 DSH Remote 主机会精简历史工具详情，实时回复和审批不变。切换主机或重启 App 后生效；旧主机仍传输完整历史。'**
+  /// **'支持此功能的远程主机会精简历史工具详情，实时回复和审批不变。切换主机或重启应用后生效。'**
   String get remoteCompactHistoryHint;
 
   /// No description provided for @searchKwRemoteCompactHistory.

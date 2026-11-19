@@ -5816,7 +5816,7 @@ class L10nZh extends L10n {
   String get desktopRemoteLogin => '登录账号';
 
   @override
-  String get desktopRemotePairInstructions => '在电脑托盘打开「手机远程协作」，扫描二维码或输入显示的配对码。';
+  String get desktopRemotePairInstructions => '在电脑端打开「手机端 → 连接手机」，扫描配对二维码或输入配对码。';
 
   @override
   String get desktopRemoteScan => '扫描配对二维码';
@@ -5916,6 +5916,72 @@ class L10nZh extends L10n {
 
   @override
   String get desktopRemoteDefaultPermissionsDescription => '这个会话在电脑上使用全开权限。确认后会同步切换为默认权限，再从手机继续。';
+
+  @override
+  String get desktopRemoteOptions => '会话选项';
+
+  @override
+  String get desktopRemoteModel => '模型';
+
+  @override
+  String get desktopRemoteExpert => '专家';
+
+  @override
+  String get desktopRemoteMode => '模式';
+
+  @override
+  String get desktopRemoteSkills => '技能';
+
+  @override
+  String get desktopRemoteNoSkills => '此工作区没有可选技能';
+
+  @override
+  String get desktopRemoteNormalMode => '默认模式';
+
+  @override
+  String get desktopRemotePlanMode => '计划模式';
+
+  @override
+  String get desktopRemoteAskMode => '问答模式';
+
+  @override
+  String get desktopRemoteGoalMode => '目标模式';
+
+  @override
+  String get desktopRemoteUseDefault => '使用桌面端默认设置';
+
+  @override
+  String get desktopRemoteApplyOptions => '确认选择';
+
+  @override
+  String get desktopRemoteFullAccess => '完全允许（本会话）';
+
+  @override
+  String get desktopRemoteFullAccessHint => '启用后，本会话的后续操作可自动允许。';
+
+  @override
+  String get desktopRemoteAllowOnce => '允许本次';
+
+  @override
+  String get desktopRemoteRejectOnce => '拒绝本次';
+
+  @override
+  String get desktopRemoteApprovePlan => '确认计划';
+
+  @override
+  String get desktopRemoteAbandonPlan => '放弃计划';
+
+  @override
+  String get desktopRemotePauseGoal => '暂停目标';
+
+  @override
+  String get desktopRemoteResumeGoal => '恢复目标';
+
+  @override
+  String get desktopRemoteExitGoal => '退出目标';
+
+  @override
+  String get desktopRemoteMessageTooLong => '消息不能超过 16,000 个字符。';
 
   @override
   String get automaticDiagnosticsRecover => '恢复本地记录';
@@ -16320,13 +16386,13 @@ class L10nZh extends L10n {
   String get remoteConsole => '远程控制台';
 
   @override
-  String get remoteHostsIntro => '在手机上接着用电脑或服务器上的 DSH';
+  String get remoteHostsIntro => '在手机上继续使用桌面端，或通过 SSH 连接服务器';
 
   @override
   String get remoteSshHosts => 'SSH 主机';
 
   @override
-  String get remoteSshRequirements => '需要那台主机开着 SSH，并装好 DSH';
+  String get remoteSshRequirements => '请在主机上启用 SSH，并安装兼容的运行引擎';
 
   @override
   String get remoteAddSshHost => '添加 SSH 主机';
@@ -16487,7 +16553,7 @@ class L10nZh extends L10n {
   String get remoteEditHost => '编辑主机';
 
   @override
-  String get remoteSshHostIntro => '连接你电脑或服务器上的 DSH';
+  String get remoteSshHostIntro => '通过 SSH 连接电脑或服务器';
 
   @override
   String get remoteHostBasicInfo => '基本信息';
@@ -16869,7 +16935,7 @@ class L10nZh extends L10n {
 
   @override
   String remoteSshInstallCommand(String command) {
-    return '还没装 DSH？在主机上运行 $command';
+    return '如需安装运行引擎，请在主机上运行 $command';
   }
 
   @override
@@ -17012,7 +17078,7 @@ class L10nZh extends L10n {
   String get remoteErrHistoryModeChanged => '主机已不支持精简历史，请切换到其他主机后再连回来，或重启 App，重新加载历史';
 
   @override
-  String get remoteCompactHistoryHint => '支持的 DSH Remote 主机会精简历史工具详情，实时回复和审批不变。切换主机或重启 App 后生效；旧主机仍传输完整历史。';
+  String get remoteCompactHistoryHint => '支持此功能的远程主机会精简历史工具详情，实时回复和审批不变。切换主机或重启应用后生效。';
 
   @override
   String get searchKwRemoteCompactHistory => '精简 简洁 历史 工具 传输 流量 远程 compact slim lite';

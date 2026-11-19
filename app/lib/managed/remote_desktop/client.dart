@@ -111,7 +111,7 @@ class DesktopRemoteClient {
         if (result['expired'] == true || result['online'] == false) {
           throw const DesktopRemoteException('DESKTOP_OFFLINE');
         }
-        await Future<void>.delayed(const Duration(milliseconds: 700));
+        await Future<void>.delayed(Duration(milliseconds: method == 'chat/watch' ? 280 : 700));
       }
       throw const DesktopRemoteException('REQUEST_TIMEOUT');
     } on DesktopRemoteException catch (error) {

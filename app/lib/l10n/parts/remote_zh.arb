@@ -591,9 +591,9 @@
   "remotePassword": "密码",
   "remoteRestoreServer": "改回默认服务器 dsh.r2049.cn",
   "remoteConsole": "远程控制台",
-  "remoteHostsIntro": "在手机上接着用电脑或服务器上的 DSH",
+  "remoteHostsIntro": "在手机上继续使用桌面端，或通过 SSH 连接服务器",
   "remoteSshHosts": "SSH 主机",
-  "remoteSshRequirements": "需要那台主机开着 SSH，并装好 DSH",
+  "remoteSshRequirements": "请在主机上启用 SSH，并安装兼容的运行引擎",
   "remoteAddSshHost": "添加 SSH 主机",
   "remoteSshDirect": "不经过第三方服务器",
   "remoteOtherMethods": "其他方式",
@@ -691,7 +691,7 @@
   "remoteErrPublicKeyFile": "这不是私钥文件，请选不带 .pub 的那个（例如 id_ed25519）",
   "remotePrivateKeyImported": "已导入私钥，原文件可以删掉了",
   "remoteEditHost": "编辑主机",
-  "remoteSshHostIntro": "连接你电脑或服务器上的 DSH",
+  "remoteSshHostIntro": "通过 SSH 连接电脑或服务器",
   "remoteHostBasicInfo": "基本信息",
   "remoteHostNameHint": "比如：电脑、家里的 Mac",
   "remoteHost": "主机",
@@ -974,7 +974,7 @@
       }
     }
   },
-  "remoteSshInstallCommand": "还没装 DSH？在主机上运行 {command}",
+  "remoteSshInstallCommand": "如需安装运行引擎，请在主机上运行 {command}",
   "@remoteSshInstallCommand": {
     "placeholders": {
       "command": {
@@ -1067,6 +1067,6 @@
   "remoteTransferSettings": "远程传输",
   "remoteCompactHistory": "精简历史",
   "remoteErrHistoryModeChanged": "主机已不支持精简历史，请切换到其他主机后再连回来，或重启 App，重新加载历史",
-  "remoteCompactHistoryHint": "支持的 DSH Remote 主机会精简历史工具详情，实时回复和审批不变。切换主机或重启 App 后生效；旧主机仍传输完整历史。",
+  "remoteCompactHistoryHint": "支持此功能的远程主机会精简历史工具详情，实时回复和审批不变。切换主机或重启应用后生效。",
   "searchKwRemoteCompactHistory": "精简 简洁 历史 工具 传输 流量 远程 compact slim lite"
 }

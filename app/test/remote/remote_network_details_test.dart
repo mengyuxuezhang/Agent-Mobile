@@ -110,7 +110,7 @@ void main() {
     await tester.scrollUntilVisible(compact, 300);
     expect(SettingsIndex.spot('remote-compact-history'), isNotNull);
     expect(tester.widget<SettingsSwitchTile>(compact).value, isFalse);
-    expect(find.textContaining('切换主机或重启 App 后生效'), findsOneWidget);
+    expect(find.textContaining('切换主机或重启应用后生效'), findsOneWidget);
     await tester.tap(compact);
     await frames(tester);
     expect(tester.widget<SettingsSwitchTile>(compact).value, isTrue);

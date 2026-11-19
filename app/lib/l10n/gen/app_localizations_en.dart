@@ -6161,7 +6161,7 @@ class L10nEn extends L10n {
 
   @override
   String get desktopRemotePairInstructions =>
-      'Open Mobile remote work in the desktop tray, then scan the QR code or enter the pairing code.';
+      'On your computer, open Mobile → Connect phone, then scan the pairing QR code or enter the code.';
 
   @override
   String get desktopRemoteScan => 'Scan pairing QR code';
@@ -6264,6 +6264,72 @@ class L10nEn extends L10n {
   @override
   String get desktopRemoteDefaultPermissionsDescription =>
       'This chat uses full access. Continue from your phone by switching this chat to default permissions on your computer.';
+
+  @override
+  String get desktopRemoteOptions => 'Session options';
+
+  @override
+  String get desktopRemoteModel => 'Model';
+
+  @override
+  String get desktopRemoteExpert => 'Expert';
+
+  @override
+  String get desktopRemoteMode => 'Mode';
+
+  @override
+  String get desktopRemoteSkills => 'Skills';
+
+  @override
+  String get desktopRemoteNoSkills => 'No skills available in this workspace';
+
+  @override
+  String get desktopRemoteNormalMode => 'Default mode';
+
+  @override
+  String get desktopRemotePlanMode => 'Plan mode';
+
+  @override
+  String get desktopRemoteAskMode => 'Ask mode';
+
+  @override
+  String get desktopRemoteGoalMode => 'Goal mode';
+
+  @override
+  String get desktopRemoteUseDefault => 'Use desktop default';
+
+  @override
+  String get desktopRemoteApplyOptions => 'Apply';
+
+  @override
+  String get desktopRemoteFullAccess => 'Allow all for this chat';
+
+  @override
+  String get desktopRemoteFullAccessHint => 'Future tool operations in this chat may be approved automatically.';
+
+  @override
+  String get desktopRemoteAllowOnce => 'Allow once';
+
+  @override
+  String get desktopRemoteRejectOnce => 'Reject once';
+
+  @override
+  String get desktopRemoteApprovePlan => 'Approve plan';
+
+  @override
+  String get desktopRemoteAbandonPlan => 'Abandon plan';
+
+  @override
+  String get desktopRemotePauseGoal => 'Pause goal';
+
+  @override
+  String get desktopRemoteResumeGoal => 'Resume goal';
+
+  @override
+  String get desktopRemoteExitGoal => 'Exit goal';
+
+  @override
+  String get desktopRemoteMessageTooLong => 'Messages must be 16,000 characters or fewer.';
 
   @override
   String get automaticDiagnosticsRecover => 'Recover local records';
@@ -17146,13 +17212,13 @@ class L10nEn extends L10n {
   String get remoteConsole => 'Remote console';
 
   @override
-  String get remoteHostsIntro => 'Keep using DSH from your computer or server on your phone';
+  String get remoteHostsIntro => 'Continue working on your desktop, or connect to a server over SSH';
 
   @override
   String get remoteSshHosts => 'SSH hosts';
 
   @override
-  String get remoteSshRequirements => 'Host needs SSH enabled and DSH installed';
+  String get remoteSshRequirements => 'Enable SSH and install a compatible engine on the host';
 
   @override
   String get remoteAddSshHost => 'Add SSH host';
@@ -17316,7 +17382,7 @@ class L10nEn extends L10n {
   String get remoteEditHost => 'Edit host';
 
   @override
-  String get remoteSshHostIntro => 'Connect to DSH on your computer or server';
+  String get remoteSshHostIntro => 'Connect to your computer or server over SSH';
 
   @override
   String get remoteHostBasicInfo => 'Basic information';
@@ -17753,7 +17819,7 @@ class L10nEn extends L10n {
 
   @override
   String remoteSshInstallCommand(String command) {
-    return 'DSH not installed? Run $command on the host.';
+    return 'To install the engine, run $command on the host.';
   }
 
   @override
@@ -17903,7 +17969,7 @@ class L10nEn extends L10n {
 
   @override
   String get remoteCompactHistoryHint =>
-      'Reduces historical tool details on supporting DSH Remote Hosts; live replies and approvals stay unchanged. Switch hosts or restart the app to apply. Older Hosts keep full history.';
+      'Supporting remote hosts send fewer tool details in historical messages. Live replies and approvals are unaffected. Switch hosts or restart the app to apply.';
 
   @override
   String get searchKwRemoteCompactHistory => 'compact slim lite history tools transfer bandwidth remote';

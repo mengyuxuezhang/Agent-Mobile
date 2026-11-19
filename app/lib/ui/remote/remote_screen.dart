@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../managed/brand.dart';
+import '../../managed/remote_desktop/screen.dart';
+import '../../managed/session.dart';
 import '../../remote/relay/relay_backend.dart';
 import '../../runtime/local_footprint.dart';
 import '../../runtime/runtime_state.dart';
@@ -89,7 +92,8 @@ class RemoteScreen extends ConsumerWidget {
     final l10n = context.l10n;
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
     final active = ref.watch(activeHostProvider);
-    final signedIn = ref.watch(relayAccountProvider.select((a) => a.value?.signedIn ?? false));
+    const managed = ManagedBrand.isConfigured;
+    final signedIn = !managed && ref.watch(relayAccountProvider.select((a) => a.value?.signedIn ?? false));
     void push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
     return AppPage.list(
       title: l10n.commonRemoteHost,
@@ -97,7 +101,22 @@ class RemoteScreen extends ConsumerWidget {
       actions: const [AskAiButton(AskAiTopic.remote)],
       children: [
         _ActiveCard(active: active),
-        _RelaySection(onUse: (h) => _use(context, ref, h)),
+        if (managed)
+          SettingsSection(
+            title: l10n.desktopRemoteTitle,
+            children: [
+              SettingsTile(
+                icon: AppIcons.remoteHosts,
+                title: l10n.remotePairEntry,
+                subtitle: ref.watch(managedSignedInProvider)
+                    ? l10n.desktopRemotePairInstructions
+                    : l10n.desktopRemoteSignIn,
+                onTap: () => push(const DesktopRemoteScreen()),
+              ),
+            ],
+          )
+        else
+          _RelaySection(onUse: (h) => _use(context, ref, h)),
         SettingsSection(
           title: l10n.remoteTransferSettings,
           children: [
@@ -130,18 +149,19 @@ class RemoteScreen extends ConsumerWidget {
             ),
           ],
         ),
-        SettingsSection(
-          title: l10n.remoteOtherMethods,
-          children: [
-            SettingsTile(
-              icon: AppIcons.webConsole,
-              tinted: false,
-              title: l10n.remoteWebConsole,
-              subtitle: l10n.remoteWebConsoleProvider,
-              onTap: () => _openConsole(context),
-            ),
-          ],
-        ),
+        if (!managed)
+          SettingsSection(
+            title: l10n.remoteOtherMethods,
+            children: [
+              SettingsTile(
+                icon: AppIcons.webConsole,
+                tinted: false,
+                title: l10n.remoteWebConsole,
+                subtitle: l10n.remoteWebConsoleProvider,
+                onTap: () => _openConsole(context),
+              ),
+            ],
+          ),
         // Only meaningful once there is a host to come back to.
         if (ssh.isNotEmpty || signedIn)
           SettingsSection(
@@ -179,7 +199,9 @@ class _ActiveCard extends ConsumerWidget {
     final error = status.error;
     // Errors a retry can't fix go to the host's settings (SSH) or the trust
     // check (relay) instead.
-    final needsLogin = active.kind == HostKind.relay && error?.kind == HostLinkErrorKind.notLoggedIn;
+    final needsLogin = !ManagedBrand.isConfigured &&
+        active.kind == HostKind.relay &&
+        error?.kind == HostLinkErrorKind.notLoggedIn;
     final needsSettings = ssh != null && error != null && !error.retryable;
     final needsTrust =
         active.kind == HostKind.relay &&

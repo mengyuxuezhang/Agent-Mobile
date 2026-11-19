@@ -2,19 +2,24 @@ import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
 import 'package:dsh_app/l10n/l10n.dart';
+import 'package:dsh_app/managed/brand.dart';
 import 'package:dsh_app/managed/remote_desktop/client.dart';
 import 'package:dsh_app/managed/remote_desktop/screen.dart';
 import 'package:dsh_app/managed/session.dart';
 import 'package:dsh_app/ui/remote/pairing_page.dart';
+import 'package:dsh_app/ui/remote/remote_screen.dart';
+import 'package:dsh_app/ui/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('scan action passes the decoded QR to the managed device session', (tester) async {
-    final session = ManagedSession()..token = 'phone-test-session';
+    SharedPreferences.setMockInitialValues({});
+    final session = ManagedSession();
     final client = _PairScreenClient();
     const payload = 'agent-remote-v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
     await tester.pumpWidget(
@@ -26,14 +31,35 @@ void main() {
             (context, onCode) => TextButton(onPressed: () => onCode(payload), child: const Text('fixture scanner')),
           ),
         ],
-        child: const MaterialApp(
-          locale: Locale('zh'),
+        child: MaterialApp(
+          locale: const Locale('zh'),
+          theme: buildLightTheme(),
           localizationsDelegates: L10n.localizationsDelegates,
           supportedLocales: L10n.supportedLocales,
-          home: DesktopRemoteScreen(),
+          home: ManagedBrand.isConfigured ? const RemoteScreen() : const DesktopRemoteScreen(),
         ),
       ),
     );
+    if (ManagedBrand.isConfigured) {
+      await tester.pumpAndSettle();
+      expect(find.text('登录 DSH Remote'), findsNothing);
+      expect(find.textContaining('自建服务器'), findsNothing);
+      expect(find.textContaining('liguobao'), findsNothing);
+      expect(find.textContaining('DeepSeek'), findsNothing);
+      expect(find.text('其他方式'), findsNothing);
+      expect(find.text('网页版远程控制台'), findsNothing);
+      for (final provider in ['GitHub', '知乎', 'Google']) {
+        expect(find.textContaining(provider), findsNothing);
+      }
+      expect(find.text('精简历史'), findsOneWidget);
+      expect(find.textContaining('DSH Remote'), findsNothing);
+      await tester.tap(find.text('扫码配对电脑'));
+      await tester.pumpAndSettle();
+    }
+    expect(find.text('请先登录与电脑相同的品牌账号。'), findsOneWidget);
+    expect(find.textContaining('DeepSeek'), findsNothing);
+    session.token = 'phone-test-session';
+    await tester.pumpAndSettle();
     await tester.tap(find.text('扫描配对二维码'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('fixture scanner'));
