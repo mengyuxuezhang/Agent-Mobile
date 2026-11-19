@@ -11,6 +11,7 @@ import '../companion/companion_state.dart';
 import '../runtime/runtime_state.dart';
 import 'connection_state.dart';
 import 'hosts_state.dart';
+import 'notify_state.dart' show appForegroundProvider;
 import '../runtime/local_paths.dart';
 import 'read_list_cache.dart';
 import 'read_list_identity.dart';
@@ -224,6 +225,13 @@ class SessionsController extends AsyncNotifier<List<SessionSummary>> {
       _buildRead = null;
       return r.read(readListCacheProvider).stamp(<SessionSummary>[], null, Object());
     }
+    if (host.kind == HostKind.desktop) {
+      final timer = Timer.periodic(const Duration(seconds: 15), (_) {
+        if (r.read(appForegroundProvider)) unawaited(refresh());
+      });
+      ref.onDispose(timer.cancel);
+      return _buildRead = _load(r, conn.client, seq, null);
+    }
     final identity = r.watch(readListIdentityProvider);
     // Only a waiting or sending archive has anything to retire; otherwise a
     // mux state change must not republish the list mid-load.
@@ -294,7 +302,7 @@ class SessionsController extends AsyncNotifier<List<SessionSummary>> {
       final cache = r.read(readListCacheProvider);
       cache.stamp(sessions, identity, client);
       _origin = cache.origin(sessions);
-      _readTitles(r, client);
+      if (_host?.kind != HostKind.desktop) _readTitles(r, client);
     }
     return _visible();
   }
@@ -979,7 +987,7 @@ class CurrentSessionController extends Notifier<String?> {
     final host = ref.read(activeHostProvider);
     ref.read(pendingSessionFolderProvider.notifier).select(null);
     state = sessionId;
-    unawaited(_persist(host, sessionId));
+    if (host.kind != HostKind.desktop) unawaited(_persist(host, sessionId));
   }
 
   Future<void> _persist(HostRef host, String? sessionId) async {

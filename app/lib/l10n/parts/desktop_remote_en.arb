@@ -1,4 +1,6 @@
 {
+  "desktopRemotePhoneSubtitle": "Run on this phone",
+  "desktopRemoteHostName": "Desktop",
   "desktopRemoteTitle": "Connect to desktop",
   "desktopRemoteRefresh": "Refresh",
   "desktopRemoteDisconnect": "Disconnect",
@@ -27,6 +29,7 @@
   "desktopRemoteUnavailable": "This workspace or chat is no longer available.",
   "desktopRemoteOffline": "Desktop is offline. Check that the desktop app is running, then refresh.",
   "desktopRemoteTimeout": "Desktop did not respond in time. Refresh to check the task status.",
+  "desktopRemoteRelayBusy": "The relay is busy. Retrying conversation sync.",
   "desktopRemoteBusy": "The desktop is working. Wait for the current task to finish.",
   "desktopRemoteLocalControl": "Open the chat on your computer and restore default permissions before continuing.",
   "desktopRemoteApprovalGone": "This request was already resolved or has expired.",

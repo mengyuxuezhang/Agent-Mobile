@@ -15,6 +15,7 @@ import '../../l10n/l10n.dart';
 import '../../runtime/runtime_state.dart';
 import '../../state/connection_state.dart';
 import '../../state/features_state.dart';
+import '../../state/hosts_state.dart';
 import '../../state/models_state.dart' show modelSelectionScopeProvider;
 import '../../state/new_chat_modes.dart';
 import '../../state/sessions_state.dart' show currentSessionProvider;
@@ -108,16 +109,17 @@ class NewChatOptions extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
+    final desktop = ref.watch(activeHostProvider.select((host) => host.kind == HostKind.desktop));
     final pending = ref.watch(pendingNewChatModesProvider);
 
-    final presets = newChatPresets(ref.watch(agentPresetsProvider).value);
+    final presets = desktop ? const <AgentPresetInfo>[] : newChatPresets(ref.watch(agentPresetsProvider).value);
     final fallbackPreset = defaultPreset(presets);
     AgentPresetInfo? shownPreset = fallbackPreset;
     for (final preset in presets) {
       if (preset.id == pending.preset && preset.broken == null) shownPreset = preset;
     }
 
-    final permissions = ref.watch(permissionStateProvider(null)).value;
+    final permissions = desktop ? null : ref.watch(permissionStateProvider(null)).value;
     final hasPermissions = permissions != null && permissions.options.isNotEmpty;
     final local = ref.watch(activeConnectionProvider.select((c) => c.value?.isLocal ?? false));
     final autoApprove = ref.watch(settingsProvider.select((s) => s.autoApproveCommands));

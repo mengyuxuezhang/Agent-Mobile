@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 
 import '../../../l10n/host_text.dart';
 import '../../../l10n/l10n.dart';
+import '../../../managed/remote_desktop/host.dart';
 import '../../common/risk_notice.dart';
 import '../../theme/app_icons.dart';
 import '../../theme/theme.dart';
@@ -39,10 +40,18 @@ typedef ApprovalAllowAll = Future<void> Function(ApprovalRequest request);
 /// └──────────────────────────────────┘
 /// ```
 class ApprovalCard extends StatefulWidget {
-  const ApprovalCard({super.key, required this.request, required this.onRespond, this.onAllowAll, this.view});
+  const ApprovalCard({
+    super.key,
+    required this.request,
+    required this.onRespond,
+    this.onAllowAll,
+    this.view,
+    this.onDesktopChoice,
+  });
 
   final ApprovalRequest request;
   final ApprovalResponder onRespond;
+  final Future<void> Function(String?)? onDesktopChoice;
 
   /// null 时不显示"本对话都允许"。
   final ApprovalAllowAll? onAllowAll;
@@ -77,7 +86,17 @@ class _ApprovalCardState extends State<ApprovalCard> {
     if (mounted) setState(() => _busy = null);
   }
 
+  Future<void> _desktopChoice(Map<String, dynamic>? choice) async {
+    final respond = widget.onDesktopChoice;
+    if (_busy != null || respond == null) return;
+    if (choice?['kind'] == 'fullAccess' && (!await confirmRisk(context, RiskNotices.fullAccess) || !mounted)) return;
+    setState(() => _busy = ApprovalDecision.allowOnce);
+    await respond(choice?['id'] as String?);
+    if (mounted) setState(() => _busy = null);
+  }
+
   String get _title {
+    if (widget.onDesktopChoice != null) return widget.request.toolName;
     final name = widget.view?.name ?? widget.request.toolName;
     return switch (name) {
       'bash' || 'pwsh' => appL10n.chatApproveCommand,
@@ -133,36 +152,61 @@ class _ApprovalCardState extends State<ApprovalCard> {
                 ),
               ],
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _busy == null ? () => _respond(ApprovalDecision.reject) : null,
-                      style: OutlinedButton.styleFrom(
-                        minimumSize: button,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        side: BorderSide(color: colors.outline.withValues(alpha: 0.5)),
+              if (widget.onDesktopChoice != null)
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    for (final choice in desktopItems(widget.request.raw['choices']))
+                      OutlinedButton(
+                        onPressed: _busy == null ? () => _desktopChoice(choice) : null,
+                        child: Text(switch (choice['kind']) {
+                          'fullAccess' => l10n.desktopRemoteFullAccess,
+                          'allow_once' => l10n.desktopRemoteAllowOnce,
+                          'reject_once' => l10n.desktopRemoteRejectOnce,
+                          'approved' => l10n.desktopRemoteApprovePlan,
+                          'cancelled' => l10n.desktopRemoteDecline,
+                          'abandoned' => l10n.desktopRemoteAbandonPlan,
+                          _ => choice['name'] as String,
+                        }),
                       ),
-                      child: _BusySwap(busy: _busy == ApprovalDecision.reject, child: Text(l10n.chatDecline)),
+                    if (!desktopItems(widget.request.raw['choices']).any((choice) => choice['kind'] == 'cancelled'))
+                      TextButton(
+                        onPressed: _busy == null ? () => _desktopChoice(null) : null,
+                        child: Text(l10n.desktopRemoteDecline),
+                      ),
+                  ],
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _busy == null ? () => _respond(ApprovalDecision.reject) : null,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: button,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          side: BorderSide(color: colors.outline.withValues(alpha: 0.5)),
+                        ),
+                        child: _BusySwap(busy: _busy == ApprovalDecision.reject, child: Text(l10n.chatDecline)),
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton(
-                      onPressed: _busy == null ? () => _respond(ApprovalDecision.allowOnce) : null,
-                      style: FilledButton.styleFrom(
-                        minimumSize: button,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
-                      child: _BusySwap(
-                        busy: _busy == ApprovalDecision.allowOnce,
-                        color: colors.onPrimary,
-                        child: Text(l10n.chatAllowOnce),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: FilledButton(
+                        onPressed: _busy == null ? () => _respond(ApprovalDecision.allowOnce) : null,
+                        style: FilledButton.styleFrom(
+                          minimumSize: button,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: _BusySwap(
+                          busy: _busy == ApprovalDecision.allowOnce,
+                          color: colors.onPrimary,
+                          child: Text(l10n.chatAllowOnce),
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
               if (widget.onAllowAll != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),

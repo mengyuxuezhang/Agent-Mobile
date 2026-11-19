@@ -5,6 +5,8 @@ import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../l10n/l10n.dart';
+import '../managed/remote_desktop/client.dart';
+import '../managed/remote_desktop/host.dart';
 import '../remote/link_status.dart';
 import '../remote/network_watch.dart';
 import '../remote/relay/relay_backend.dart';
@@ -193,6 +195,7 @@ final sshLinkFactoryProvider = Provider<SshLinkFactory>(
 /// something watches it (the active connection, a status row); closed after.
 final hostLinkProvider = Provider.autoDispose.family<HostLink?, HostRef>((ref, host) {
   switch (host.kind) {
+    case HostKind.desktop:
     case HostKind.local:
       return null;
     case HostKind.ssh:
@@ -252,6 +255,7 @@ final hostLinkStatusProvider = StreamProvider.autoDispose.family<HostLinkStatus,
 final hostNameProvider = Provider.autoDispose.family<String?, HostRef>((ref, host) {
   return switch (host.kind) {
     HostKind.local => appL10n.commonThisPhone,
+    HostKind.desktop => appL10n.desktopRemoteHostName,
     HostKind.ssh => ref.watch(hostsProvider.select((s) => s.sshById(host.id)?.name)),
     HostKind.relay => ref.watch(relayAccountProvider.select((a) => a.value?.hostById(host.id)?.name)) ?? host.name,
   };
@@ -544,6 +548,11 @@ final activeConnectionProvider = Provider<AsyncValue<HostConnection?>>((ref) {
 
 AsyncValue<HostConnection?> _connectionForHost(Ref ref, HostRef host) {
   switch (host.kind) {
+    case HostKind.desktop:
+      ref.watch(desktopPairProvider);
+      final remote = ref.watch(desktopRemoteProvider);
+      if (remote.pairId != host.id) return const AsyncData(null);
+      return AsyncData(ref.watch(_desktopConnectionProvider(host)));
     case HostKind.local:
       return ref.watch(localConnectionProvider);
     case HostKind.ssh:
@@ -556,3 +565,9 @@ AsyncValue<HostConnection?> _connectionForHost(Ref ref, HostRef host) {
       return ref.watch(remoteConnectionProvider(host));
   }
 }
+
+final _desktopConnectionProvider = Provider.autoDispose.family<HostConnection, HostRef>((ref, host) {
+  final client = DesktopHostClient(ref.watch(desktopRemoteProvider));
+  ref.onDispose(() => unawaited(client.close()));
+  return HostConnection(client: client, isLocal: false, kind: host.kind, hostId: host.id);
+});

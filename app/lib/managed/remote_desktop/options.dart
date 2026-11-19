@@ -77,10 +77,7 @@ class _OptionsSheetState extends State<_OptionsSheet> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
           children: [
-            Text(
-              widget.creating ? l10n.desktopRemoteNewChat : l10n.desktopRemoteOptions,
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text(l10n.desktopRemoteOptions, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             _picker(l10n.desktopRemoteModel, _items('models'), _model, (value) => _model = value),
             if (widget.creating)
@@ -122,7 +119,7 @@ class _OptionsSheetState extends State<_OptionsSheet> {
                 mode: _mode,
                 skills: _skills.intersection(skills.map((item) => item['id'] as String).toSet()),
               )),
-              child: Text(widget.creating ? l10n.desktopRemoteNewChat : l10n.desktopRemoteApplyOptions),
+              child: Text(l10n.desktopRemoteApplyOptions),
             ),
           ],
         ),

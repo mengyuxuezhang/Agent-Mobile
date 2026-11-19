@@ -5,6 +5,8 @@ import 'dart:math';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../managed/remote_desktop/chat_feed.dart';
+import '../managed/remote_desktop/host.dart';
 import '../diagnostics/app_error_log.dart';
 import '../l10n/l10n.dart';
 import '../usage/usage_stats.dart';
@@ -560,6 +562,9 @@ class ChatController extends Notifier<ChatState> {
 
   /// The last snapshot's projections (permission preset, plan mode: see
   /// `session_modes.dart`); later log events override them.
+  DesktopChatFeed? _desktop;
+  DesktopChatFeed? get desktop => _desktop;
+
   SessionProjections get projections => _transcript.projections;
 
   @override
@@ -568,6 +573,21 @@ class ChatController extends Notifier<ChatState> {
     // rebuild may reuse this Notifier for an identically named session there.
     // Reconnecting to the same Host keeps the existing conversation consent.
     final host = ref.watch(activeHostProvider);
+    _desktop = null;
+    if (host.kind == HostKind.desktop) {
+      final client = ref.watch(activeConnectionProvider).value?.client;
+      if (client is! DesktopHostClient) return const ChatState(loading: false, syncing: true);
+      final feed = DesktopChatFeed(client, sessionId, (value) {
+        if (ref.mounted) state = value;
+      });
+      _desktop = feed;
+      ref.onDispose(feed.close);
+      ref.listen(appForegroundProvider, (_, visible) => feed.foreground(visible));
+      scheduleMicrotask(() {
+        if (ref.mounted) feed.foreground(ref.read(appForegroundProvider));
+      });
+      return const ChatState(syncing: true);
+    }
     if (_approvalHost != host) {
       // These requests belong to the previous Host, even if the new Host has
       // the same session id. A new watch replays its own mux's pending requests.
@@ -725,6 +745,9 @@ class ChatController extends Notifier<ChatState> {
   /// A retired page request must not publish a timeout notice for a newer one.
   Future<bool> waitForSync({bool Function()? isCurrent}) async {
     if (isCurrent?.call() == false) return false;
+    if (_desktop case final feed?) {
+      return await feed.waitForSync() && isCurrent?.call() != false;
+    }
     if (_canControl) return true;
     final owner = ref;
     final client = _client;
@@ -745,6 +768,7 @@ class ChatController extends Notifier<ChatState> {
   /// Reopens the actual follow, even when the mux itself never disconnected.
   /// Deduplicated and bounded; only an applied fresh snapshot is success.
   Future<bool> resync() {
+    if (_desktop case final feed?) return feed.refresh();
     if (_resyncFuture case final existing?) return existing;
     final client = _client;
     if (client == null) return Future.value(false);
@@ -1319,6 +1343,9 @@ class ChatController extends Notifier<ChatState> {
     bool Function()? deliveryAllowed,
   }) async {
     final client = _client;
+    if (_desktop case final feed?) {
+      return attachments.isEmpty && mode == SendMode.now && await feed.send(text);
+    }
     final trimmed = text.trim();
     if (client == null || (trimmed.isEmpty && attachments.isEmpty)) {
       return false;
@@ -1698,6 +1725,10 @@ class ChatController extends Notifier<ChatState> {
   /// wakes it with the order unchanged. Resolves to what could not be put
   /// back (the screen returns it to the composer).
   Future<List<PendingPrompt>> cancel() async {
+    if (_desktop case final feed?) {
+      await feed.act('chat/stop');
+      return const [];
+    }
     final client = _client;
     if (client == null || !_canControl || !state.running || state.stopping) return const [];
     final operation = _ChatOperation(ref, client, _syncScope);
@@ -2002,6 +2033,7 @@ class ChatController extends Notifier<ChatState> {
   }
 
   Future<void> loadOlder() async {
+    if (_desktop case final feed?) return feed.loadOlder();
     final client = _client;
     final oldest = _transcript.oldestSeq;
     if (client == null || oldest == null || !_transcript.hasMoreHistory || state.loadingOlder) {
@@ -2043,7 +2075,13 @@ class ChatController extends Notifier<ChatState> {
     }
   }
 
-  void dismissError() => state = state.copyWith(clearError: true);
+  void dismissError() {
+    if (_desktop case final feed?) {
+      feed.dismissError();
+    } else {
+      state = state.copyWith(clearError: true);
+    }
+  }
 
   void dismissDefaultModelSaveWarning() {
     _defaultModelSaveFailed = false;

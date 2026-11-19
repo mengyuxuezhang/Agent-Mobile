@@ -24,11 +24,11 @@ export '../remote/ssh/ssh_transport.dart' show PresentedHostKey;
 export '../remote/relay/relay_backend.dart' show RelayHost, RelayTrust, RelayUser;
 export '../remote/ssh/ssh_host_config.dart';
 
-/// The three kinds of DSH host the app can talk to.
-enum HostKind { local, ssh, relay }
+/// The execution hosts available in the shared chat shell.
+enum HostKind { local, ssh, relay, desktop }
 
-/// Identifies a host: the on-device engine, a saved SSH host, or a relay
-/// (ds-harness-remote) device. Equality is by kind + id; [name] is only a
+/// Identifies a host: the on-device engine, a saved SSH host, a relay
+/// (ds-harness-remote) device, or a paired desktop. Equality is by kind + id; [name] is only a
 /// cached display name for relay hosts (their list lives on the server).
 class HostRef {
   const HostRef._(this.kind, this.id, [this.name]);
@@ -38,6 +38,8 @@ class HostRef {
   const HostRef.ssh(String id) : this._(HostKind.ssh, id);
 
   const HostRef.relay(String id, {String? name}) : this._(HostKind.relay, id, name);
+
+  const HostRef.desktop(String id) : this._(HostKind.desktop, id);
 
   final HostKind kind;
   final String id;
@@ -80,6 +82,7 @@ String hostLabel(HostKind kind, String? name) => switch (kind) {
   HostKind.local => appL10n.commonThisPhone,
   HostKind.ssh => '${_short(name ?? appL10n.stateSshHost)} · SSH',
   HostKind.relay => appL10n.stateHostRemoteLabel(_short(name ?? appL10n.commonRemoteHost)),
+  HostKind.desktop => appL10n.stateHostRemoteLabel(appL10n.desktopRemoteHostName),
 };
 
 String _short(String name) {
@@ -319,6 +322,7 @@ final remoteCompactHistoryProvider = NotifierProvider<RemoteCompactHistoryContro
 class ActiveHostController extends Notifier<HostRef> {
   static const prefsKey = 'active_host';
   bool _touched = false;
+  final _sessionByHost = <HostRef, String?>{};
   late Future<void> _loaded;
 
   @override
@@ -346,17 +350,21 @@ class ActiveHostController extends Notifier<HostRef> {
     }
   }
 
-  /// Switches hosts. The open conversation belongs to the old host, so the
-  /// chat goes back to "新对话".
+  /// Switches hosts. Desktop collaboration remembers the last open chat on each side.
   void select(HostRef host) {
     _touched = true;
     if (host == state && host.name == state.name) return;
-    final changed = host != state;
+    final previous = state;
+    final changed = host != previous;
+    final desktopSwitch = previous.kind == HostKind.desktop || host.kind == HostKind.desktop;
+    if (changed && desktopSwitch) _sessionByHost[previous] = ref.read(currentSessionProvider);
     state = host;
-    if (changed) ref.read(currentSessionProvider.notifier).select(null);
+    if (changed) {
+      ref.read(currentSessionProvider.notifier).select(desktopSwitch ? _sessionByHost[host] : null);
+    }
     unawaited(
       SharedPreferences.getInstance()
-          .then((prefs) => prefs.setString(prefsKey, host.encode()))
+          .then((prefs) => prefs.setString(prefsKey, (host.kind == HostKind.desktop ? HostRef.local : host).encode()))
           .catchError((_) => false),
     );
   }
@@ -365,8 +373,11 @@ class ActiveHostController extends Notifier<HostRef> {
   /// relay account): leave one in use for 本机, and drop one only saved for
   /// the next launch (with 连接上次使用的主机 off, this launch never used it).
   Future<void> forget(bool Function(HostRef host) gone) async {
+    _sessionByHost.removeWhere((host, _) => gone(host));
     if (gone(state)) {
+      final forgotten = state;
       select(HostRef.local);
+      _sessionByHost.remove(forgotten);
       return;
     }
     try {

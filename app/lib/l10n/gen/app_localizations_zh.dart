@@ -5801,6 +5801,12 @@ class L10nZh extends L10n {
   String get companionAdaptNetwork => '网络不通';
 
   @override
+  String get desktopRemotePhoneSubtitle => '在这台手机上运行';
+
+  @override
+  String get desktopRemoteHostName => '桌面端';
+
+  @override
   String get desktopRemoteTitle => '连接桌面端';
 
   @override
@@ -5883,6 +5889,9 @@ class L10nZh extends L10n {
 
   @override
   String get desktopRemoteTimeout => '电脑响应超时，请刷新确认任务状态。';
+
+  @override
+  String get desktopRemoteRelayBusy => '中继服务暂时繁忙，正在重新同步对话。';
 
   @override
   String get desktopRemoteBusy => '电脑正在处理任务，请等待当前任务结束。';

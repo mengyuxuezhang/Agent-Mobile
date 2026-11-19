@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../managed/remote_desktop/host.dart';
 import '../../runtime/runtime_state.dart';
 import '../../state/connection_state.dart';
 import '../../state/hosts_state.dart';
@@ -38,6 +39,11 @@ HostStatusView watchHostStatus(WidgetRef ref, HostRef host) {
     final view = EngineStatusView.of(ref.watch(localRuntimeProvider));
     return HostStatusView(view.tone, view.label);
   }
+  if (host.kind == HostKind.desktop) {
+    return ref.watch(desktopPairProvider).value == host.id
+        ? HostStatusView(StatusTone.ok, appL10n.remoteConnected)
+        : HostStatusView(StatusTone.idle, appL10n.commonNotConnected);
+  }
   final status = ref.watch(hostLinkStatusProvider(host)).value ?? HostLinkStatus.idle;
   return HostStatusView.ofLink(status);
 }
@@ -45,12 +51,12 @@ HostStatusView watchHostStatus(WidgetRef ref, HostRef host) {
 IconData hostKindIcon(HostKind kind) => switch (kind) {
   HostKind.local => AppIcons.thisPhone,
   HostKind.ssh => AppIcons.sshHost,
-  HostKind.relay => AppIcons.computer,
+  HostKind.relay || HostKind.desktop => AppIcons.computer,
 };
 
 /// Identity tint per kind (one of the 8 fixed pairs), so rows read as a set.
 int hostKindTint(HostKind kind) => switch (kind) {
   HostKind.local => 0,
   HostKind.ssh => 6,
-  HostKind.relay => 1,
+  HostKind.relay || HostKind.desktop => 1,
 };

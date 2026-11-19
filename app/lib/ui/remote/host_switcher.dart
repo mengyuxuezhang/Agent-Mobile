@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../managed/brand.dart';
+import '../../managed/remote_desktop/host.dart';
+import '../../managed/session.dart';
 import '../../runtime/local_footprint.dart';
 import '../../runtime/runtime_state.dart';
 import '../../state/connection_state.dart';
@@ -84,7 +87,10 @@ class HostSheet extends ConsumerWidget {
     final l10n = context.l10n;
     final active = ref.watch(activeHostProvider);
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
-    final account = ref.watch(relayAccountProvider).value;
+    final account = ManagedBrand.isConfigured ? null : ref.watch(relayAccountProvider).value;
+    final pair = ManagedBrand.isConfigured && ref.watch(managedSignedInProvider)
+        ? ref.watch(desktopPairProvider).value
+        : null;
     final relayHosts = account?.signedIn == true ? account!.hosts : const <RelayHost>[];
 
     Future<void> pick(HostRef host) async {
@@ -125,9 +131,17 @@ class HostSheet extends ConsumerWidget {
                     _HostRow(
                       host: HostRef.local,
                       title: l10n.commonThisPhone,
-                      subtitle: l10n.remoteThisPhoneDsh,
+                      subtitle: ManagedBrand.isConfigured ? l10n.desktopRemotePhoneSubtitle : l10n.remoteThisPhoneDsh,
                       active: active.isLocal,
                       onTap: localMissing ? installLocal : () => pick(HostRef.local),
+                    ),
+                  if (pair != null)
+                    _HostRow(
+                      host: HostRef.desktop(pair),
+                      title: l10n.desktopRemoteHostName,
+                      subtitle: l10n.remoteRemoteLabel,
+                      active: active == HostRef.desktop(pair),
+                      onTap: () => pick(HostRef.desktop(pair)),
                     ),
                   for (final h in ssh)
                     _HostRow(
@@ -161,22 +175,25 @@ class HostSheet extends ConsumerWidget {
               SheetGroup(
                 margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
                 children: [
+                  if (!ManagedBrand.isConfigured)
+                    SettingsTile(
+                      icon: AppIcons.pet,
+                      tinted: false,
+                      title: l10n.companionTitle,
+                      subtitle: l10n.companionEntrySubtitle,
+                      onTap: () {
+                        final navigator = Navigator.of(context);
+                        navigator.pop();
+                        unawaited(navigator.push(MaterialPageRoute<void>(builder: (_) => const CompanionPage())));
+                      },
+                    ),
                   SettingsTile(
-                    icon: AppIcons.pet,
+                    icon: pair == null && ssh.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
                     tinted: false,
-                    title: l10n.companionTitle,
-                    subtitle: l10n.companionEntrySubtitle,
-                    onTap: () {
-                      final navigator = Navigator.of(context);
-                      navigator.pop();
-                      unawaited(navigator.push(MaterialPageRoute<void>(builder: (_) => const CompanionPage())));
-                    },
-                  ),
-                  SettingsTile(
-                    icon: ssh.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
-                    tinted: false,
-                    title: ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectComputer : l10n.remoteManageHosts,
-                    subtitle: ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectionMethods : null,
+                    title: pair == null && ssh.isEmpty && relayHosts.isEmpty
+                        ? l10n.remoteConnectComputer
+                        : l10n.remoteManageHosts,
+                    subtitle: pair == null && ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectionMethods : null,
                     onTap: () {
                       Navigator.of(context).pop();
                       onManage();
@@ -216,7 +233,7 @@ class _HostRow extends ConsumerWidget {
     // Live state for 本机 and the active remote host; presence for relay
     // hosts; nothing for idle SSH hosts (connecting just to show a dot
     // would cost a login).
-    final HostStatusView? view = host.isLocal || active
+    final HostStatusView? view = host.isLocal || host.kind == HostKind.desktop || active
         ? watchHostStatus(ref, host)
         : relay != null
         ? HostStatusView.ofRelayHost(relay!)

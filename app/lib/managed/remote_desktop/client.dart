@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:collection';
 import 'dart:convert';
 import 'dart:math';
 
@@ -13,8 +15,12 @@ typedef RemoteJson = Map<String, dynamic>;
 final desktopRemoteProvider = Provider<DesktopRemoteClient>((ref) {
   final session = ref.watch(managedSessionProvider);
   final transport = http.Client();
-  ref.onDispose(transport.close);
-  return DesktopRemoteClient(transport, ManagedBrand.api, ManagedBrand.projectId, () => session.token);
+  final client = DesktopRemoteClient(transport, ManagedBrand.api, ManagedBrand.projectId, () => session.token);
+  ref.onDispose(() {
+    transport.close();
+    unawaited(client.linkChanges.close());
+  });
+  return client;
 });
 
 class DesktopRemoteException implements Exception {
@@ -23,24 +29,67 @@ class DesktopRemoteException implements Exception {
 }
 
 class DesktopRemoteClient {
-  DesktopRemoteClient(this._http, Uri api, this._project, this._token)
-    : _root = api.resolve('client/remote-desktop/v1/');
+  DesktopRemoteClient(this._http, Uri api, this._project, this._token, {Duration Function()? monotonicTime})
+    : _root = api.resolve('client/remote-desktop/v1/'),
+      _now = monotonicTime ?? _monotonicTime();
+
+  static Duration Function() _monotonicTime() {
+    final clock = Stopwatch()..start();
+    return () => clock.elapsed;
+  }
 
   final http.Client _http;
   final Uri _root;
   final String _project;
   final String? Function() _token;
   final _cipher = AesGcm.with256bits();
+  final Duration Function() _now;
+  final _submissions = Queue<Duration>();
+  Duration? _lastWatch;
+
+  // The relay retains even completed jobs for 45 seconds and admits 32 per
+  // pair. Spread watch reads out and reserve slots for sends and approvals.
+  static const _retention = Duration(seconds: 45, milliseconds: 500);
+  static const _watchInterval = Duration(milliseconds: 2100);
+  static const _watchBudget = 26;
+
+  Duration get chatWatchDelay {
+    final now = _now();
+    _pruneSubmissions(now);
+    final nextWatch = (_lastWatch ?? -_watchInterval) + _watchInterval;
+    final nextSlot = _submissions.length >= _watchBudget
+        ? _submissions.elementAt(_submissions.length - _watchBudget) + _retention
+        : Duration.zero;
+    final next = nextWatch > nextSlot ? nextWatch : nextSlot;
+    return next > now ? next - now : Duration.zero;
+  }
+
+  void _pruneSubmissions(Duration now) {
+    while (_submissions.isNotEmpty && now - _submissions.first >= _retention) {
+      _submissions.removeFirst();
+    }
+  }
+
+  void _resetPacing() {
+    _submissions.clear();
+    _lastWatch = null;
+  }
+
   static final _random = Random.secure();
   static const _prefix = 'agent-remote-v1';
   ({String id, SecretKey key, String token})? _link;
 
-  bool get connected {
-    if (_link?.token != _token()) _link = null;
-    return _link != null;
-  }
+  final linkChanges = StreamController<void>.broadcast();
 
-  void disconnect() => _link = null;
+  String? get pairId => _link?.token == _token() ? _link?.id : null;
+  bool get connected => pairId != null;
+
+  void disconnect() {
+    if (_link == null) return;
+    _link = null;
+    _resetPacing();
+    if (!linkChanges.isClosed) linkChanges.add(null);
+  }
 
   Future<void> revoke() async {
     final link = _link;
@@ -70,7 +119,9 @@ class DesktopRemoteClient {
     if (id is! String || !RegExp(r'^[0-9a-f-]{36}$').hasMatch(id)) {
       throw const DesktopRemoteException('INVALID_RESPONSE');
     }
+    _resetPacing();
     _link = (id: id, key: SecretKey(bytes), token: auth);
+    if (!linkChanges.isClosed) linkChanges.add(null);
   }
 
   Future<RemoteJson> request(String method, [RemoteJson fields = const {}]) async {
@@ -86,6 +137,11 @@ class DesktopRemoteClient {
     final box = await _cipher.encrypt(value, secretKey: link.key, aad: requestAad);
     final ciphertext = base64Url.encode(box.concatenation()).replaceAll('=', '');
     final path = 'pairs/${link.id}/requests';
+    if (_link != link || auth != _token()) throw const DesktopRemoteException('ACCESS_REVOKED');
+    final submittedAt = _now();
+    _pruneSubmissions(submittedAt);
+    _submissions.addLast(submittedAt);
+    if (method == 'chat/watch') _lastWatch = submittedAt;
     try {
       await _call('POST', path, auth, {'requestId': requestId, 'ciphertext': ciphertext});
       final elapsed = Stopwatch()..start();
@@ -108,9 +164,8 @@ class DesktopRemoteClient {
           if (data['method'] != method) throw const DesktopRemoteException('INVALID_RESPONSE');
           return data;
         }
-        if (result['expired'] == true || result['online'] == false) {
-          throw const DesktopRemoteException('DESKTOP_OFFLINE');
-        }
+        if (result['online'] == false) throw const DesktopRemoteException('DESKTOP_OFFLINE');
+        if (result['expired'] == true) throw const DesktopRemoteException('REQUEST_TIMEOUT');
         await Future<void>.delayed(Duration(milliseconds: method == 'chat/watch' ? 280 : 700));
       }
       throw const DesktopRemoteException('REQUEST_TIMEOUT');
@@ -137,8 +192,9 @@ class DesktopRemoteClient {
       await _http.send(request),
     ))().timeout(const Duration(seconds: 7));
     if (_token() != token) throw const DesktopRemoteException('ACCESS_REVOKED');
-    final json = jsonDecode(response.body);
     if (response.statusCode == 401) throw const DesktopRemoteException('SIGN_IN');
+    if (response.statusCode == 429) throw const DesktopRemoteException('RELAY_BUSY');
+    final json = jsonDecode(response.body);
     if (json is! RemoteJson) throw const DesktopRemoteException('INVALID_RESPONSE');
     if (response.statusCode != 200 || json['success'] != true || json['data'] is! RemoteJson) {
       throw DesktopRemoteException(json['code'] as String? ?? 'RELAY_UNAVAILABLE');

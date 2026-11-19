@@ -6,6 +6,8 @@ import 'package:dsh_app/managed/brand.dart';
 import 'package:dsh_app/managed/remote_desktop/client.dart';
 import 'package:dsh_app/managed/remote_desktop/screen.dart';
 import 'package:dsh_app/managed/session.dart';
+import 'package:dsh_app/state/hosts_state.dart';
+import 'package:dsh_app/state/sessions_state.dart';
 import 'package:dsh_app/ui/remote/pairing_page.dart';
 import 'package:dsh_app/ui/remote/remote_screen.dart';
 import 'package:dsh_app/ui/theme/theme.dart';
@@ -65,10 +67,34 @@ void main() {
     await tester.tap(find.text('fixture scanner'));
     await tester.pumpAndSettle();
     expect(client.code, payload);
-    expect(find.text('电脑工作区'), findsOneWidget);
+    final app = ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
+    expect(app.read(activeHostProvider), const HostRef.desktop('test-pair'));
     await tester.pumpWidget(const SizedBox.shrink());
     session.dispose();
   });
+  testWidgets('switching hosts keeps each chat selection on its own host', (tester) async {
+    SharedPreferences.setMockInitialValues({});
+    final app = ProviderContainer();
+    addTearDown(app.dispose);
+    final hosts = app.read(activeHostProvider.notifier);
+    final chats = app.read(currentSessionProvider.notifier);
+    const desktop = HostRef.desktop('paired-desktop');
+
+    chats.select('phone-chat');
+    hosts.select(desktop);
+    expect(app.read(currentSessionProvider), isNull);
+
+    chats.select('desktop-chat');
+    hosts.select(HostRef.local);
+    expect(app.read(currentSessionProvider), 'phone-chat');
+    hosts.select(desktop);
+    expect(app.read(currentSessionProvider), 'desktop-chat');
+
+    await hosts.forget((host) => host == desktop);
+    expect(app.read(activeHostProvider), HostRef.local);
+    expect(app.read(currentSessionProvider), 'phone-chat');
+  });
+
   test('grouped manual code and scanned QR claim the same pairing', () async {
     final entropy = List<int>.filled(16, 7);
     final key = (await Sha256().hash([...utf8.encode('agent-remote-manual-v1\u0000'), ...entropy])).bytes;
@@ -94,6 +120,56 @@ void main() {
     await client.pair('agent-remote-v1:${encoded(key)}');
     expect(submitted, hasLength(2));
     expect(submitted.first, submitted.last);
+  });
+
+  test('paces live reads across chat and inventory requests and identifies a busy relay', () async {
+    var now = Duration.zero;
+    var busy = false;
+    var expired = false;
+    http.Response success(RemoteJson data) => http.Response(jsonEncode({'success': true, 'data': data}), 200);
+    final client = DesktopRemoteClient(
+      MockClient((request) async {
+        if (request.url.path.endsWith('/claims')) {
+          return success({'pairId': '2576a4b4-4b6d-4ad5-9bb8-cb494623198d'});
+        }
+        if (busy) return http.Response('Temporarily busy', 429);
+        if (request.method == 'POST') return success({'accepted': true});
+        return success({'online': !expired, 'expired': true});
+      }),
+      Uri.parse('https://example.test/api/'),
+      'example-brand',
+      () => 'phone',
+      monotonicTime: () => now,
+    );
+    Future<void> timedOut(String method) => expectLater(
+      client.request(method),
+      throwsA(isA<DesktopRemoteException>().having((e) => e.code, 'code', 'REQUEST_TIMEOUT')),
+    );
+
+    await client.pair('agent-remote-v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
+    await timedOut('chat/watch');
+    expect(client.chatWatchDelay, const Duration(milliseconds: 2100));
+
+    now += const Duration(seconds: 3);
+    for (var i = 0; i < 25; i++) {
+      await timedOut('sessions/recent');
+    }
+    expect(client.chatWatchDelay, const Duration(milliseconds: 42500));
+    now = const Duration(milliseconds: 45500);
+    expect(client.chatWatchDelay, Duration.zero);
+
+    busy = true;
+    await expectLater(
+      client.request('chat/watch'),
+      throwsA(isA<DesktopRemoteException>().having((e) => e.code, 'code', 'RELAY_BUSY')),
+    );
+    busy = false;
+    expired = true;
+    await expectLater(
+      client.request('chat/watch'),
+      throwsA(isA<DesktopRemoteException>().having((e) => e.code, 'code', 'DESKTOP_OFFLINE')),
+    );
+    expect(client.connected, true);
   });
 
   test('binds the encrypted request to the paired account and discards it after login changes', () async {
@@ -171,7 +247,7 @@ class _PairScreenClient extends DesktopRemoteClient {
   String? code;
 
   @override
-  bool get connected => code != null;
+  String? get pairId => code == null ? null : 'test-pair';
 
   @override
   Future<void> pair(String value) async {

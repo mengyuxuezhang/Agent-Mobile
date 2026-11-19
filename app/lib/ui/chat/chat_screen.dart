@@ -44,6 +44,8 @@ import '../../state/drawer_view_state.dart';
 import '../../state/engine_control.dart';
 import '../../state/engine_settings_state.dart' show engineSettingsProvider;
 import '../../state/features_state.dart' show agentPresetsProvider, permissionStateProvider;
+import '../../managed/remote_desktop/host.dart';
+import '../../managed/remote_desktop/options.dart';
 import '../../state/hosts_state.dart' show HostKind, HostRef, activeHostProvider;
 import '../../state/media_generation.dart';
 import '../../state/mention_state.dart';
@@ -339,8 +341,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
 
   void _reportVoice() => _voiceFlag.set(_voice.active);
 
-  void _switchDraft(String? sessionId) {
+  String _draftFor(String? sessionId) {
+    final host = ref.read(activeHostProvider);
     final key = sessionId ?? 'new';
+    return host.kind == HostKind.desktop ? 'desktop:${host.id}:$key' : key;
+  }
+
+  void _switchDraft(String? sessionId) {
+    final key = _draftFor(sessionId);
     if (key == _draftKey) return;
     _dropPreparedPhoneSkill();
     _draftScope = Object();
@@ -365,6 +373,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _scheduleInteraction();
+    ref.listenManual(activeHostProvider, (previous, next) {
+      if (previous?.kind == HostKind.desktop || next.kind == HostKind.desktop) {
+        scheduleMicrotask(() {
+          if (mounted) _switchDraft(ref.read(currentSessionProvider));
+        });
+      }
+    });
     ref.listenManual(currentSessionProvider, (_, _) => _scheduleInteraction());
     _voice = VoiceInputController(
       input: _input,
@@ -411,13 +426,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     });
     _voiceFlag = ref.read(voiceInputActiveProvider.notifier);
     _voice.addListener(_reportVoice);
-    _draftKey = ref.read(currentSessionProvider) ?? 'new';
+    _draftKey = _draftFor(ref.read(currentSessionProvider));
     _draftStore = ref.read(draftStoreProvider.notifier);
     // Start reading what earlier sessions still owe before the first send.
     ref.read(owedSetupsProvider.notifier);
     _showDraft(ref.read(draftStoreProvider).drafts[_draftKey]);
     _input.addListener(_resetSlashDismissal);
     _input.addListener(_saveDraft);
+    ref.listenManual(activeHostProvider, (previous, next) {
+      if (previous?.kind == HostKind.desktop || next.kind == HostKind.desktop) {
+        _switchDraft(ref.read(currentSessionProvider));
+      }
+    });
     ref.listenManual(currentSessionProvider, (_, next) {
       // Another conversation: nothing of this one is read aloud any more.
       ref.read(readAloudProvider.notifier).stop();
@@ -566,6 +586,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
       // failed apply, kept across screens and restarts): settle them first.
       // (The saved ones are read when this screen starts, long before a send.)
       final host = ref.read(activeHostProvider);
+      if (host.kind == HostKind.desktop) return current;
       final owed = ref.read(owedSetupsProvider.notifier).of(host, current);
       if (owed != null && !await _applyOwedSetup(host, current, owed, isCurrent)) return null;
       return current;
@@ -582,7 +603,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     try {
       final String sessionId;
       try {
-        sessionId = await ref.read(sessionsProvider.notifier).create();
+        final sessions = ref.read(sessionsProvider.notifier);
+        final connection = ref.read(activeConnectionProvider).value;
+        sessionId = connection?.kind == HostKind.desktop
+            ? await sessions.createForConnection(connection!, isCurrent: ownsCreation)
+            : await sessions.create();
       } catch (e) {
         if (ownsCreation()) {
           setState(() => _localError = chatErrorText(e, action: appL10n.chatCreateFailed));
@@ -591,7 +616,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
       }
       // A completed create may outlive its page, client or new-chat draft.
       // Check before any selection, migration, deletion or model side effect.
-      if (!ownsCreation() || _draftKey != 'new' || ref.read(currentSessionProvider) != null) return null;
+      if (!ownsCreation() || _draftKey != _draftFor(null) || ref.read(currentSessionProvider) != null) return null;
       if (ref.read(pendingSessionFolderProvider) != pendingFolder) return null;
       if (pendingFolder != null) {
         await ref
@@ -607,20 +632,27 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
       // What the chips show is what the session gets: a pick the Host no
       // longer offers falls back to the default, a hidden Host default to
       // the offered one.
-      final setup = OwedSetup(
-        preset: newChatPresetToApply(ref.read(agentPresetsProvider).value, pendingModes.preset),
-        permission: newChatPermissionToApply(ref.read(permissionStateProvider(null)).value, pendingModes.permission),
-        model: ref.read(pendingModelProvider),
-      );
-      _draftKey = sessionId;
+      final setup = host.kind == HostKind.desktop
+          ? const OwedSetup()
+          : OwedSetup(
+              preset: newChatPresetToApply(ref.read(agentPresetsProvider).value, pendingModes.preset),
+              permission: newChatPermissionToApply(
+                ref.read(permissionStateProvider(null)).value,
+                pendingModes.permission,
+              ),
+              model: ref.read(pendingModelProvider),
+            );
+      _draftKey = _draftFor(sessionId);
       _saveDraft();
-      if (!ownsCreation() || _draftKey != sessionId) return null;
+      if (!ownsCreation() || _draftKey != _draftFor(sessionId)) return null;
       ref.read(currentSessionProvider.notifier).select(sessionId);
-      if (!ownsCreation() || _draftKey != sessionId || ref.read(currentSessionProvider) != sessionId) return null;
-      ref.read(composerQuoteProvider.notifier).move('new', sessionId);
-      ref.read(generateModeProvider.notifier).move('new', sessionId);
-      if (!ownsCreation() || _draftKey != sessionId) return null;
-      _draftStore.clear('new');
+      if (!ownsCreation() || _draftKey != _draftFor(sessionId) || ref.read(currentSessionProvider) != sessionId) {
+        return null;
+      }
+      ref.read(composerQuoteProvider.notifier).move(_draftFor(null), _draftFor(sessionId));
+      ref.read(generateModeProvider.notifier).move(_draftFor(null), _draftFor(sessionId));
+      if (!ownsCreation() || _draftKey != _draftFor(sessionId)) return null;
+      _draftStore.clear(_draftFor(null));
       if (!setup.isEmpty) {
         if (!ownsCreation()) return null;
         // The picks move to the session: owed until the Host confirms each.
@@ -630,7 +662,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         if (!ownsCreation()) return null;
         if (!await _applyOwedSetup(host, sessionId, setup, ownsCreation)) return null;
       }
-      if (!ownsCreation() || _draftKey != sessionId || ref.read(currentSessionProvider) != sessionId) return null;
+      if (!ownsCreation() || _draftKey != _draftFor(sessionId) || ref.read(currentSessionProvider) != sessionId) {
+        return null;
+      }
       return sessionId;
     } finally {
       if (mounted && identical(_creating, attempt)) setState(() => _creating = null);
@@ -687,6 +721,72 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     }
   }
 
+  bool _desktopOptionsOpen = false;
+
+  Future<void> _desktopOptions(DesktopHostClient client, String? id) async {
+    if (_desktopOptionsOpen) return;
+    _desktopOptionsOpen = true;
+    bool current() => _sameHost(client) && ref.read(currentSessionProvider) == id;
+    try {
+      if (id != null) await client.ensureTarget(id);
+      if (!current()) return;
+      final target = id == null ? null : client.target(id);
+      final catalog = await client.remote.request('chat/options', {
+        'workspaceId': ?(target?['workspaceId'] ?? ref.read(selectedWorkspaceProvider)?.workspaceId),
+      });
+      if (!mounted || !current()) return;
+      final previous = client.options(id);
+      final controller = id == null ? null : ref.read(chatProvider(id).notifier);
+      final selected = await chooseDesktopOptions(
+        context,
+        catalog,
+        initial: (
+          model: previous.model ?? (id == null ? null : ref.read(chatProvider(id)).model?.model),
+          expert: previous.expert,
+          mode: previous.mode ?? controller?.desktop?.executionMode,
+          skills: previous.skills,
+        ),
+        creating: id == null,
+        allowGoal: id == null || controller?.desktop?.goalAvailable == true,
+      );
+      if (!current() || selected == null) return;
+      if (id != null && selected.model != null && selected.model != ref.read(chatProvider(id)).model?.model) {
+        if (await controller?.desktop?.act('chat/configure', {'modelId': selected.model}) != true || !current()) return;
+      }
+      client.setOptions(id, selected);
+      setState(() {});
+    } catch (error) {
+      if (current()) _toast(desktopErrorText(error));
+    } finally {
+      _desktopOptionsOpen = false;
+    }
+  }
+
+  Future<void> _useDesktopDefaultPermissions(String id) async {
+    final chat = ref.read(chatProvider(id).notifier).desktop;
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.desktopRemoteDefaultPermissions),
+        content: Text(l10n.desktopRemoteDefaultPermissionsDescription),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.desktopRemoteDefaultPermissions),
+          ),
+        ],
+      ),
+    );
+    if (mounted && ref.read(currentSessionProvider) == id && confirmed == true) {
+      await chat?.act('chat/use-default-permissions');
+    }
+  }
+
   Future<void> _send({SendMode mode = SendMode.now}) async {
     // The `@` picker is open on a typed name: sending picks its marked row.
     if (_mentions.pickHighlighted()) return;
@@ -695,7 +795,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     if ((typed.isEmpty && drafts.isEmpty) || _creating != null || _syncWait != null) return;
     // Generation mode: an ordinary message whose first line is the
     // parameter header (media-generation §8, revision of 2026-10-28).
-    final generate = ref.read(generateModeProvider).byKey[_draftKey];
+    final generate = ref.read(activeHostProvider).kind == HostKind.desktop
+        ? null
+        : ref.read(generateModeProvider).byKey[_draftKey];
     if (generate != null && !_generateReady(generate, typed, drafts)) return;
     final client = ref.read(activeConnectionProvider).value?.client;
     if (client == null) return;
@@ -719,7 +821,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
 
     // With attachments or a quote the line is a message, even if it starts
     // with "/".
-    if (drafts.isEmpty && quote == null && generate == null) {
+    if (client is! DesktopHostClient && drafts.isEmpty && quote == null && generate == null) {
       final input = parseSlashInput(text);
       // A bare "/": the palette is open, the person picks a row.
       if (input != null && !input.hasArgs && input.token.isEmpty) return;
@@ -736,14 +838,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     }
 
     final sessionId = await _ensureSession(isCurrent: ownsDraft);
-    if (sessionId == null || !ownsDraft() || _draftKey != sessionId) return;
+    if (sessionId == null || !ownsDraft() || _draftKey != _draftFor(sessionId)) return;
     final chat = ref.read(chatProvider(sessionId).notifier);
     if (!ref.read(chatProvider(sessionId)).controlReady) {
       if (mode == SendMode.interrupt) return;
       // session/create can finish before its first follow snapshot. Keep
       // the draft visible while waiting; a timeout must not eat the message.
       final wait = Object();
-      bool current() => identical(_syncWait, wait) && _draftKey == sessionId && ownsDraft();
+      bool current() => identical(_syncWait, wait) && _draftKey == _draftFor(sessionId) && ownsDraft();
       setState(() => _syncWait = wait);
       try {
         final ready = await chat.waitForSync(isCurrent: current);
@@ -751,7 +853,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
             !current() ||
             _input.text.trim() != typed ||
             !identical(_drafts, drafts) ||
-            ref.read(composerQuoteProvider)[sessionId] != quote) {
+            ref.read(composerQuoteProvider)[_draftFor(sessionId)] != quote) {
           return;
         }
       } finally {
@@ -761,17 +863,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     // Creation/model application can also await while the composer is edited,
     // even when the session's baseline is already available on return.
     if (!ownsDraft() ||
-        _draftKey != sessionId ||
+        _draftKey != _draftFor(sessionId) ||
         _input.text.trim() != typed ||
         !identical(_drafts, drafts) ||
-        ref.read(composerQuoteProvider)[sessionId] != quote) {
+        ref.read(composerQuoteProvider)[_draftFor(sessionId)] != quote) {
       return;
     }
     setState(() => _drafts = const []);
     // A new message: the reply being read aloud is old news.
     ref.read(readAloudProvider.notifier).stop();
     _input.clear();
-    ref.read(composerQuoteProvider.notifier).clear(sessionId);
+    ref.read(composerQuoteProvider.notifier).clear(_draftFor(sessionId));
 
     // One open question and nothing else waiting: the text is its answer
     // (a steer would wait behind the question).
@@ -807,13 +909,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
   /// 没发出去:把字、附件和引用还给那个对话(用户还没开始打新的才还)。
   void _giveBack(String sessionId, String text, List<DraftAttachment> attachments, {String? quote}) {
     final quotes = ref.read(composerQuoteProvider.notifier);
-    if (quote != null && ref.read(composerQuoteProvider)[sessionId] == null) {
-      quotes.set(sessionId, quote);
+    if (quote != null && ref.read(composerQuoteProvider)[_draftFor(sessionId)] == null) {
+      quotes.set(_draftFor(sessionId), quote);
     }
-    if (_draftKey != sessionId) {
+    if (_draftKey != _draftFor(sessionId)) {
       // Moved on to another conversation: back into its own draft.
-      if (ref.read(draftStoreProvider).drafts[sessionId] == null) {
-        _draftStore.save(sessionId, text, attachments);
+      if (ref.read(draftStoreProvider).drafts[_draftFor(sessionId)] == null) {
+        _draftStore.save(_draftFor(sessionId), text, attachments);
       }
       return;
     }
@@ -840,7 +942,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
 
   /// 「引用」 on a reply of [sessionId]: the passage above its composer.
   void _quote(String sessionId, String passage) {
-    ref.read(composerQuoteProvider.notifier).set(sessionId, passage);
+    ref.read(composerQuoteProvider.notifier).set(_draftFor(sessionId), passage);
     _focus.requestFocus();
   }
 
@@ -927,7 +1029,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     final readyNumber = client?.mux.lastReadyGenerationNumber;
     final text = _input.text;
     final drafts = _drafts;
-    final quote = ref.read(composerQuoteProvider)[sessionId];
+    final quote = ref.read(composerQuoteProvider)[_draftFor(sessionId)];
     final mode = await showAppSheet<SendMode>(
       context,
       builder: (sheet) => SafeArea(
@@ -963,14 +1065,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     if (mode == null ||
         !mounted ||
         !identical(_draftScope, scope) ||
-        _draftKey != sessionId ||
+        _draftKey != _draftFor(sessionId) ||
         ref.read(currentSessionProvider) != sessionId ||
         client == null ||
         !_sameConnection(client, generation) ||
         client.mux.lastReadyGenerationNumber != readyNumber ||
         _input.text != text ||
         !identical(_drafts, drafts) ||
-        ref.read(composerQuoteProvider)[sessionId] != quote) {
+        ref.read(composerQuoteProvider)[_draftFor(sessionId)] != quote) {
       return;
     }
     await _send(mode: mode);
@@ -1012,10 +1114,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         client.mux.lastReadyGenerationNumber != readyNumber) {
       return;
     }
-    if (_draftKey != sessionId) {
+    if (_draftKey != _draftFor(sessionId)) {
       // The queue removal succeeded, but its text still belongs to that chat.
       // Preserve an existing draft as a whole, including its quote.
-      if (ref.read(draftStoreProvider).drafts[sessionId] == null) {
+      if (ref.read(draftStoreProvider).drafts[_draftFor(sessionId)] == null) {
         _giveBackLost(sessionId, [prompt]);
       }
       return;
@@ -1023,8 +1125,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     var restored = false;
     if (_input.text.trim().isEmpty && prompt.text.isNotEmpty) {
       final (:quote, :body) = splitQuote(prompt.text);
-      if (quote != null && ref.read(composerQuoteProvider)[sessionId] == null) {
-        ref.read(composerQuoteProvider.notifier).set(sessionId, quote);
+      if (quote != null && ref.read(composerQuoteProvider)[_draftFor(sessionId)] == null) {
+        ref.read(composerQuoteProvider.notifier).set(_draftFor(sessionId), quote);
       }
       _input.text = quote == null ? prompt.text : body;
       restored = true;
@@ -1459,10 +1561,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         final sessionId = await _ensureSession(isCurrent: ownsDraft);
         if (sessionId == null ||
             !ownsDraft() ||
-            _draftKey != sessionId ||
+            _draftKey != _draftFor(sessionId) ||
             _input.text != text ||
             !identical(_drafts, drafts) ||
-            ref.read(composerQuoteProvider)[sessionId] != quote) {
+            ref.read(composerQuoteProvider)[_draftFor(sessionId)] != quote) {
           return;
         }
         _input.clear();
@@ -1588,6 +1690,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     final connAsync = ref.watch(activeConnectionProvider);
     final conn = connAsync.value;
     final connected = conn != null;
+    final desktop = conn?.client is DesktopHostClient ? conn!.client as DesktopHostClient : null;
+    final desktopHost = ref.watch(activeHostProvider.select((host) => host.kind == HostKind.desktop));
     final local = ref.watch(activeHostProvider.select((h) => h.kind == HostKind.local));
     final starting = local && ref.watch(localRuntimeProvider.select((s) => s.status.phase == RuntimePhase.starting));
     final tidying = starting && ref.watch(localRuntimeProvider.select((s) => s.status.tidyingFiles));
@@ -1667,7 +1771,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
         ? ref.watch(drawerViewProvider).byId(ref.watch(pendingSessionFolderProvider))
         : null;
     final hasFolders = sessionId == null && ref.watch(drawerViewProvider).folders.isNotEmpty;
-    final commands = ref.watch(slashCommandsProvider(sessionId));
+    final commands = desktopHost ? const <SlashCommand>[] : ref.watch(slashCommandsProvider(sessionId));
     final contextFraction = sessionId == null
         ? null
         : ref.watch(sessionUsageProvider(sessionId).select((u) => u.contextFraction));
@@ -1701,7 +1805,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
       });
     }
 
-    final title = switch (chat?.title ?? listedTitle) {
+    final title = switch (desktopHost ? listedTitle ?? chat?.title : chat?.title ?? listedTitle) {
       final t? when t.trim().isNotEmpty => chatTitleShown(t.trim()),
       _ => l10n.commonNewChat,
     };
@@ -1718,7 +1822,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
       },
       streamLost: chat?.streamLost ?? false,
       syncing: chat?.syncing ?? false,
-      label: conn?.label ?? l10n.commonThisPhone,
+      label: conn?.label ?? (desktopHost ? l10n.desktopRemoteHostName : l10n.commonThisPhone),
       connection: chat?.connection,
       running: chat?.running ?? false,
       stopping: chat?.stopping ?? false,
@@ -1749,8 +1853,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
     // the 新对话 key would have nothing to mirror.
     final isChild = sessionId != null && ref.watch(subagentParentProvider(sessionId).select((p) => p != null));
     // 生成模式: this conversation's, and what the host can do.
-    final generate = ref.watch(generateModeProvider.select((m) => m.byKey[_draftKey]));
-    final mediaReady = ref.watch(mediaPluginProvider) == MediaPluginState.ready;
+    final generate = desktopHost ? null : ref.watch(generateModeProvider.select((m) => m.byKey[_draftKey]));
+    final mediaReady = !desktopHost && ref.watch(mediaPluginProvider) == MediaPluginState.ready;
     // What the catalogue really offers here (§4.3): a picture can go in as a
     // reference, or as a video's first frame, only where a model takes one.
     final mediaEdit =
@@ -1901,7 +2005,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                                   onResend: _resend,
                                   onQuote: readOnly ? null : (passage) => _quote(sessionId, passage),
                                   onToast: _composerToast,
-                                  onSwitchModel: readOnly ? null : _switchModel,
+                                  onSwitchModel: readOnly
+                                      ? null
+                                      : desktop != null
+                                      ? () => unawaited(_desktopOptions(desktop, sessionId))
+                                      : _switchModel,
                                 ),
                               ),
                             ),
@@ -1952,7 +2060,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                               },
                         // The title pill opens the whole session's details (on a
                         // wide window it folds and unfolds the panel beside us).
-                        onTitleTap: sessionId == null
+                        onTitleTap: sessionId == null || desktopHost
                             ? null
                             : () => SessionDetailPage.open(context, sessionId, toggle: true),
                         // A phone's conversation has no room for it beside its title: the
@@ -1960,7 +2068,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                         // A new chat's title is only 「新对话」, so the model takes the
                         // header's right like on a wide window — picked before typing,
                         // once there is an engine to send to.
-                        trailing: narrow && (sessionId != null || !connected)
+                        trailing: desktopHost || narrow && (sessionId != null || !connected)
                             ? null
                             : ModelChip(
                                 selection: sessionId == null ? pendingModel : chat?.model,
@@ -2206,6 +2314,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                                       ),
                                     ),
                                   ),
+                                if (desktop != null && sessionId != null) _DesktopGoalActions(sessionId: sessionId),
+                                if (desktop != null &&
+                                    sessionId != null &&
+                                    ref.read(chatProvider(sessionId).notifier).desktop?.canUseDefaultPermissions ==
+                                        true)
+                                  TextButton(
+                                    onPressed: running
+                                        ? null
+                                        : () => unawaited(_useDesktopDefaultPermissions(sessionId)),
+                                    child: Text(l10n.desktopRemoteDefaultPermissions),
+                                  ),
                                 if (readOnly)
                                   const ReadOnlyBar()
                                 else
@@ -2245,15 +2364,23 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
                                         ? l10n.mediaHintVideo
                                         : l10n.mediaHintImage,
                                     onSend: _send,
-                                    onSendOptions: chat?.controlReady ?? true ? _sendOptions : null,
+                                    onSendOptions: !desktopHost && (chat?.controlReady ?? true) ? _sendOptions : null,
                                     voice: _voice,
                                     onKeyEvent: _composerKey,
-                                    onContentInserted: connected ? _pasteContent : null,
+                                    onContentInserted: connected && !desktopHost ? _pasteContent : null,
                                     onStop: _stop,
                                     hasAttachments: _drafts.isNotEmpty,
-                                    leading: AttachButton(onPressed: connected ? _attach : null),
+                                    leading: desktopHost
+                                        ? IconButton(
+                                            tooltip: l10n.desktopRemoteOptions,
+                                            icon: const Icon(Icons.tune),
+                                            onPressed: desktop == null || running
+                                                ? null
+                                                : () => unawaited(_desktopOptions(desktop, sessionId)),
+                                          )
+                                        : AttachButton(onPressed: connected ? _attach : null),
                                     keyboardInset: MediaQuery.viewInsetsOf(context).bottom,
-                                    footer: _composerOpens(context) && !isChild
+                                    footer: !desktopHost && _composerOpens(context) && !isChild
                                         ? ComposerModelPill(
                                             selection: sessionId == null ? pendingModel : chat?.model,
                                             onSelected: _modelTarget(),
@@ -2651,4 +2778,31 @@ class _ChatScaler extends TextScaler {
 
   @override
   int get hashCode => Object.hash(base, factor);
+}
+
+class _DesktopGoalActions extends ConsumerWidget {
+  const _DesktopGoalActions({required this.sessionId});
+  final String sessionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(chatProvider(sessionId));
+    final feed = ref.read(chatProvider(sessionId).notifier).desktop;
+    final status = feed?.goalStatus;
+    if (feed == null || (status != 'active' && status != 'paused')) return const SizedBox.shrink();
+    final l10n = context.l10n;
+    final paused = status == 'paused';
+    return Wrap(
+      children: [
+        TextButton(
+          onPressed: () => unawaited(feed.act('chat/goal', {'action': paused ? 'goalResume' : 'goalPause'})),
+          child: Text(paused ? l10n.desktopRemoteResumeGoal : l10n.desktopRemotePauseGoal),
+        ),
+        TextButton(
+          onPressed: () => unawaited(feed.act('chat/goal', {'action': 'goalClear'})),
+          child: Text(l10n.desktopRemoteExitGoal),
+        ),
+      ],
+    );
+  }
 }

@@ -520,7 +520,8 @@ class _SessionList extends ConsumerWidget {
       },
       onLongPress: (s) {
         final current = ref.read(drawerScopeProvider);
-        if (ref.read(readListIdentityProvider) == identity &&
+        if (ref.read(activeHostProvider).kind != HostKind.desktop &&
+            ref.read(readListIdentityProvider) == identity &&
             current?.readOnly == false &&
             current!.sessions.any((row) => identical(row, s))) {
           _showActions(context, ref, s);

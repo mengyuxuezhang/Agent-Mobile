@@ -112,7 +112,7 @@ HostConnection? readListConnection(AsyncValue<HostConnection?> value, HostRef se
 /// Listening to states does not open/start a client or the local engine.
 final readListLiveConnectionProvider = Provider<HostConnection?>((ref) {
   final connection = readListConnection(ref.watch(activeConnectionProvider), ref.watch(activeHostProvider));
-  if (connection == null) return null;
+  if (connection == null || connection.kind == HostKind.desktop) return connection;
   final status = ref.watch(_readListMuxProvider(connection.client)).value?.state ?? connection.client.mux.state;
   if (status == DshConnectionState.reconnecting ||
       status == DshConnectionState.unauthorized ||
@@ -143,6 +143,8 @@ final readListIdentityProvider = Provider<ReadListIdentity?>((ref) {
   }
 
   switch (selected.kind) {
+    case HostKind.desktop:
+      return null;
     case HostKind.local:
       final runtime = ref.watch(localRuntimeProvider);
       final rootEpoch = ref.watch(_rootEpochProvider);

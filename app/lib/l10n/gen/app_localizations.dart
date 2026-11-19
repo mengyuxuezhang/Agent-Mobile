@@ -10766,6 +10766,18 @@ abstract class L10n {
   /// **'网络不通'**
   String get companionAdaptNetwork;
 
+  /// No description provided for @desktopRemotePhoneSubtitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'在这台手机上运行'**
+  String get desktopRemotePhoneSubtitle;
+
+  /// No description provided for @desktopRemoteHostName.
+  ///
+  /// In zh, this message translates to:
+  /// **'桌面端'**
+  String get desktopRemoteHostName;
+
   /// No description provided for @desktopRemoteTitle.
   ///
   /// In zh, this message translates to:
@@ -10933,6 +10945,12 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'电脑响应超时，请刷新确认任务状态。'**
   String get desktopRemoteTimeout;
+
+  /// No description provided for @desktopRemoteRelayBusy.
+  ///
+  /// In zh, this message translates to:
+  /// **'中继服务暂时繁忙，正在重新同步对话。'**
+  String get desktopRemoteRelayBusy;
 
   /// No description provided for @desktopRemoteBusy.
   ///

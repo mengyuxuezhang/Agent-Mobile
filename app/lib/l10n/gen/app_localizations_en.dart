@@ -6145,6 +6145,12 @@ class L10nEn extends L10n {
   String get companionAdaptNetwork => 'no connection';
 
   @override
+  String get desktopRemotePhoneSubtitle => 'Run on this phone';
+
+  @override
+  String get desktopRemoteHostName => 'Desktop';
+
+  @override
   String get desktopRemoteTitle => 'Connect to desktop';
 
   @override
@@ -6229,6 +6235,9 @@ class L10nEn extends L10n {
 
   @override
   String get desktopRemoteTimeout => 'Desktop did not respond in time. Refresh to check the task status.';
+
+  @override
+  String get desktopRemoteRelayBusy => 'The relay is busy. Retrying conversation sync.';
 
   @override
   String get desktopRemoteBusy => 'The desktop is working. Wait for the current task to finish.';
