@@ -10771,15 +10771,6 @@ class L10nEn extends L10n {
   }
 
   @override
-  String get managedAuthorizedModels => 'Available models';
-
-  @override
-  String get managedConnectModels => 'Connect account models to the local engine';
-
-  @override
-  String get managedModelsConnected => 'Connected. Your account models are available in the chat model selector.';
-
-  @override
   String get managedRecentCredits => 'Recent credit activity';
 
   @override
@@ -10793,9 +10784,6 @@ class L10nEn extends L10n {
 
   @override
   String get managedRequestFailed => 'Check your information and network connection, then try again.';
-
-  @override
-  String get managedLocalEngineRequired => 'Start the local engine before connecting your account models.';
 
   @override
   String get managedRegister => 'Create an account';
@@ -10854,6 +10842,43 @@ class L10nEn extends L10n {
 
   @override
   String get managedMembershipPaymentUnavailable => 'Online payment is currently unavailable for this project.';
+
+  @override
+  String get managedOfficial => 'Official';
+
+  @override
+  String get managedModelsSignIn => 'Sign in to use your models';
+
+  @override
+  String get managedModelsEmpty => 'Your account has no available models';
+
+  @override
+  String get managedLoginTitle => 'Sign in to your account';
+
+  @override
+  String get managedShowPassword => 'Show password';
+
+  @override
+  String get managedHidePassword => 'Hide password';
+
+  @override
+  String get managedBackToLogin => 'Already have an account? Sign in';
+
+  @override
+  String get managedLoginMissingFields => 'Enter your username, password, and the five-character code.';
+
+  @override
+  String get managedLoginInvalidCredentials => 'The username or password is incorrect.';
+
+  @override
+  String get managedLoginInvalidCaptcha => 'The verification code is incorrect or has expired. Try the new code.';
+
+  @override
+  String get managedBuiltOn => 'Built on DSH-Go';
+
+  @override
+  String get managedLegalNotice =>
+      'DSH-Go © ccch1mneyyy and contributors. Agent Mobile is distributed under AGPL-3.0, without warranty. You may redistribute it under the terms shown below.';
 
   @override
   String get marketSectionOfficial => 'Official';

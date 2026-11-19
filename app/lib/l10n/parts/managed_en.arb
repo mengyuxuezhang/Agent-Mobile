@@ -38,15 +38,11 @@
       }
     }
   },
-  "managedAuthorizedModels": "Available models",
-  "managedConnectModels": "Connect account models to the local engine",
-  "managedModelsConnected": "Connected. Your account models are available in the chat model selector.",
   "managedRecentCredits": "Recent credit activity",
   "managedRefreshBenefits": "Refresh account details",
   "managedSignOut": "Sign out",
   "managedTooManyRequests": "Too many requests. Try again later.",
   "managedRequestFailed": "Check your information and network connection, then try again.",
-  "managedLocalEngineRequired": "Start the local engine before connecting your account models.",
   "managedRegister": "Create an account",
   "managedRegistrationIntro": "Use this account on both mobile and desktop.",
   "managedRegistrationEmail": "Email",
@@ -77,5 +73,17 @@
   },
   "managedMembershipEmpty": "There are no plans available right now.",
   "managedDesktopPaymentGuide": "Sign in with the same account on your computer and open Account → Buy membership. After payment, refresh here to see your updated membership.",
-  "managedMembershipPaymentUnavailable": "Online payment is currently unavailable for this project."
+  "managedMembershipPaymentUnavailable": "Online payment is currently unavailable for this project.",
+  "managedOfficial": "Official",
+  "managedModelsSignIn": "Sign in to use your models",
+  "managedModelsEmpty": "Your account has no available models",
+  "managedLoginTitle": "Sign in to your account",
+  "managedShowPassword": "Show password",
+  "managedHidePassword": "Hide password",
+  "managedBackToLogin": "Already have an account? Sign in",
+  "managedLoginMissingFields": "Enter your username, password, and the five-character code.",
+  "managedLoginInvalidCredentials": "The username or password is incorrect.",
+  "managedLoginInvalidCaptcha": "The verification code is incorrect or has expired. Try the new code.",
+  "managedBuiltOn": "Built on DSH-Go",
+  "managedLegalNotice": "DSH-Go © ccch1mneyyy and contributors. Agent Mobile is distributed under AGPL-3.0, without warranty. You may redistribute it under the terms shown below."
 }

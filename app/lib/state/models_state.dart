@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../l10n/l10n.dart';
+import '../managed/brand.dart';
+import '../managed/session.dart' show ManagedSession, managedSignedInProvider;
 import 'connection_state.dart';
 import 'hosts_state.dart';
 import 'read_list_cache.dart';
@@ -34,13 +37,35 @@ final modelCatalogProvider = FutureProvider<ModelCatalog?>((ref) async {
     if (refresh && ref.mounted) ref.invalidateSelf();
   });
   ref.onDispose(() => unawaited(sub.cancel()));
-  final catalog = await conn.client.listModels();
+  final onlyProjectModels = ManagedBrand.isConfigured && conn.isLocal;
+  final signedIn = !onlyProjectModels || ref.watch(managedSignedInProvider);
+  final catalog = signedIn
+      ? await conn.client.listModels()
+      : const ModelCatalog(defaultSelection: null, routableProviders: [], groups: [], failures: []);
+  final result = onlyProjectModels ? projectModelCatalog(catalog) : catalog;
   if (ref.mounted) {
-    cache.stamp(catalog, identity, conn.client);
-    cache.put(readListKey(identity, ReadListKind.models), catalog, () => CachedModels(catalog));
+    cache.stamp(result, identity, conn.client);
+    cache.put(readListKey(identity, ReadListKind.models), result, () => CachedModels(result));
   }
-  return catalog;
+  return result;
 });
+
+ModelCatalog projectModelCatalog(ModelCatalog catalog) {
+  const route = ManagedSession.modelRoute;
+  final selected = catalog.defaultSelection;
+  return ModelCatalog(
+    defaultSelection: selected?.provider == route ? selected : null,
+    routableProviders: catalog.routableProviders.where((provider) => provider == route).toList(),
+    groups: [
+      for (final group in catalog.groups)
+        if (group.id == route) ProviderGroup(route, appL10n.managedOfficial, group.models),
+    ],
+    failures: [
+      for (final failure in catalog.failures)
+        if (failure.provider == route) (provider: route, name: appL10n.managedOfficial, message: failure.message),
+    ],
+  );
+}
 
 /// A stale catalog is for browsing only; model selection still needs the
 /// current provider's successful authoritative response.
@@ -72,7 +97,8 @@ const defaultModelSettingsNs = 'agent-default-model';
 /// A picker belongs to one host/connection lifetime, including same-client
 /// reconnects and A -> B -> A. It must not acquire a new destination later.
 final modelSelectionScopeProvider = Provider<Object>((ref) {
-  ref.watch(activeHostProvider);
+  final host = ref.watch(activeHostProvider);
+  if (ManagedBrand.isConfigured && host.isLocal) ref.watch(managedSignedInProvider);
   ref.watch(activeConnectionProvider);
   final connection = ref.watch(readListLiveConnectionProvider);
   if (connection != null) {

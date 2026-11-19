@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
+import '../l10n/l10n.dart';
 import '../state/app_info.dart';
 import '../state/provider_backend.dart';
 import 'brand.dart';
@@ -15,6 +16,14 @@ final managedSessionProvider = Provider<ManagedSession>((ref) {
   final session = ManagedSession();
   ref.onDispose(session.dispose);
   return session;
+});
+
+final managedSignedInProvider = Provider<bool>((ref) {
+  final session = ref.watch(managedSessionProvider);
+  final listener = ref.invalidateSelf;
+  session.signedIn.addListener(listener);
+  ref.onDispose(() => session.signedIn.removeListener(listener));
+  return session.signedIn.value;
 });
 
 class ManagedSession {
@@ -29,20 +38,44 @@ class ManagedSession {
     _token = value;
     signedIn.value = value != null;
   }
+
   ManagedModelGateway? _gateway;
   ProviderBackend? _engine;
-  bool get modelsConnected => _gateway != null;
+  Future<void> _engineUpdates = Future.value();
 
-  Future<void> connectModels(ProviderBackend engine, JsonObject catalog) async {
-    final accountToken = token;
-    if (accountToken == null || !engine.isLocal) {
-      throw StateError('A signed-in account and local engine are required');
-    }
+  Future<void> _updateEngine(Future<void> Function() action) {
+    final result = _engineUpdates.then((_) => action());
+    _engineUpdates = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    return result;
+  }
+
+  Future<void> connectModels(
+    ProviderBackend engine,
+    JsonObject catalog,
+    String accountToken,
+    bool Function() current,
+  ) => _updateEngine(() => _connectModels(engine, catalog, accountToken, current));
+
+  Future<void> _connectModels(
+    ProviderBackend engine,
+    JsonObject catalog,
+    String accountToken,
+    bool Function() current,
+  ) async {
+    if (token != accountToken || !current() || !engine.isLocal) return;
     final models = managedModels(catalog);
-    if (models.isEmpty) throw StateError('No available chat models');
     final settings = await engine.read();
-    if (token != accountToken) throw StateError('Account changed');
+    if (token != accountToken || !current()) return;
     if (settings == null) throw StateError('DSH model adapter is unavailable');
+    _engine = engine;
+    final existing = settings.profiles.any((profile) => profile.route == modelRoute);
+    if (models.isEmpty) {
+      final previous = _gateway;
+      _gateway = null;
+      await previous?.close();
+      if (existing) await engine.remove(modelRoute, expectedRevision: settings.revision);
+      return;
+    }
     final gateway = ManagedModelGateway(
       http.Client(),
       endpoint: ManagedBrand.api.resolve('client/model/v1/chat/completions'),
@@ -52,12 +85,15 @@ class ManagedSession {
     );
     try {
       final url = await gateway.start();
+      if (token != accountToken || !current()) {
+        await gateway.close();
+        return;
+      }
       await engine.storeKey(_keyRef, gateway.key);
-      final existing = settings.profiles.any((profile) => profile.route == modelRoute);
       if (existing) {
         await engine.update(
           modelRoute,
-          displayName: 'YushuHub',
+          displayName: appL10n.managedOfficial,
           api: ProviderApi.openaiCompletions,
           baseUrl: url.toString(),
           apiKeyEnv: _keyRef,
@@ -69,7 +105,7 @@ class ManagedSession {
         await engine.create(
           ProviderProfile(
             route: modelRoute,
-            displayName: 'YushuHub',
+            displayName: appL10n.managedOfficial,
             api: ProviderApi.openaiCompletions.wire,
             baseUrl: url.toString(),
             apiKeyEnv: _keyRef,
@@ -77,25 +113,29 @@ class ManagedSession {
           ),
         );
       }
-      if (token != accountToken) throw StateError('Account changed');
+      if (token != accountToken) {
+        await gateway.close();
+        return;
+      }
     } catch (_) {
       await gateway.close();
       rethrow;
     }
     final previous = _gateway;
     _gateway = gateway;
-    _engine = engine;
     await previous?.close();
   }
 
   Future<void> signOut() async {
     token = null;
     final gateway = _gateway;
-    final engine = _engine;
     _gateway = null;
-    _engine = null;
-    await gateway?.close();
-    if (engine != null) {
+    final closing = gateway?.close();
+    return _updateEngine(() async {
+      final engine = _engine;
+      _engine = null;
+      await closing;
+      if (engine == null) return;
       // Remove the persistent engine entry when possible. Once the local
       // gateway is closed, any stale entry has no access to the user account.
       try {
@@ -103,7 +143,7 @@ class ManagedSession {
       } finally {
         await engine.remove(modelRoute).timeout(const Duration(seconds: 3));
       }
-    }
+    });
   }
 
   void dispose() {

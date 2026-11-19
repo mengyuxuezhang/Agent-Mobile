@@ -10211,15 +10211,6 @@ class L10nZh extends L10n {
   }
 
   @override
-  String get managedAuthorizedModels => '已授权模型';
-
-  @override
-  String get managedConnectModels => '连接账号模型到本机引擎';
-
-  @override
-  String get managedModelsConnected => '已连接。返回聊天，在模型列表中选择你的账号模型。';
-
-  @override
   String get managedRecentCredits => '最近积分流水';
 
   @override
@@ -10233,9 +10224,6 @@ class L10nZh extends L10n {
 
   @override
   String get managedRequestFailed => '请检查输入或网络后重试。';
-
-  @override
-  String get managedLocalEngineRequired => '请先启动本机引擎，再连接账号模型。';
 
   @override
   String get managedRegister => '注册账号';
@@ -10291,6 +10279,42 @@ class L10nZh extends L10n {
 
   @override
   String get managedMembershipPaymentUnavailable => '当前项目暂无可用的在线购买渠道。';
+
+  @override
+  String get managedOfficial => '官方';
+
+  @override
+  String get managedModelsSignIn => '登录账号后使用模型';
+
+  @override
+  String get managedModelsEmpty => '当前账号暂无可用模型';
+
+  @override
+  String get managedLoginTitle => '登录账号';
+
+  @override
+  String get managedShowPassword => '显示密码';
+
+  @override
+  String get managedHidePassword => '隐藏密码';
+
+  @override
+  String get managedBackToLogin => '已有账号？返回登录';
+
+  @override
+  String get managedLoginMissingFields => '请输入账号、密码和 5 位图形验证码。';
+
+  @override
+  String get managedLoginInvalidCredentials => '账号或密码不正确。';
+
+  @override
+  String get managedLoginInvalidCaptcha => '验证码错误或已失效，请输入新的验证码。';
+
+  @override
+  String get managedBuiltOn => '基于 DSH-Go 构建';
+
+  @override
+  String get managedLegalNotice => 'DSH-Go © ccch1mneyyy 及贡献者。Agent Mobile 按 AGPL-3.0 分发，不提供担保。你可以按下方许可条款再分发。';
 
   @override
   String get marketSectionOfficial => '官方';

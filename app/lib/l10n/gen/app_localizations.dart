@@ -18944,24 +18944,6 @@ abstract class L10n {
   /// **'积分：{value}'**
   String managedCreditValue(String value);
 
-  /// No description provided for @managedAuthorizedModels.
-  ///
-  /// In zh, this message translates to:
-  /// **'已授权模型'**
-  String get managedAuthorizedModels;
-
-  /// No description provided for @managedConnectModels.
-  ///
-  /// In zh, this message translates to:
-  /// **'连接账号模型到本机引擎'**
-  String get managedConnectModels;
-
-  /// No description provided for @managedModelsConnected.
-  ///
-  /// In zh, this message translates to:
-  /// **'已连接。返回聊天，在模型列表中选择你的账号模型。'**
-  String get managedModelsConnected;
-
   /// No description provided for @managedRecentCredits.
   ///
   /// In zh, this message translates to:
@@ -18991,12 +18973,6 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'请检查输入或网络后重试。'**
   String get managedRequestFailed;
-
-  /// No description provided for @managedLocalEngineRequired.
-  ///
-  /// In zh, this message translates to:
-  /// **'请先启动本机引擎，再连接账号模型。'**
-  String get managedLocalEngineRequired;
 
   /// No description provided for @managedRegister.
   ///
@@ -19099,6 +19075,78 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'当前项目暂无可用的在线购买渠道。'**
   String get managedMembershipPaymentUnavailable;
+
+  /// No description provided for @managedOfficial.
+  ///
+  /// In zh, this message translates to:
+  /// **'官方'**
+  String get managedOfficial;
+
+  /// No description provided for @managedModelsSignIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录账号后使用模型'**
+  String get managedModelsSignIn;
+
+  /// No description provided for @managedModelsEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前账号暂无可用模型'**
+  String get managedModelsEmpty;
+
+  /// No description provided for @managedLoginTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录账号'**
+  String get managedLoginTitle;
+
+  /// No description provided for @managedShowPassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'显示密码'**
+  String get managedShowPassword;
+
+  /// No description provided for @managedHidePassword.
+  ///
+  /// In zh, this message translates to:
+  /// **'隐藏密码'**
+  String get managedHidePassword;
+
+  /// No description provided for @managedBackToLogin.
+  ///
+  /// In zh, this message translates to:
+  /// **'已有账号？返回登录'**
+  String get managedBackToLogin;
+
+  /// No description provided for @managedLoginMissingFields.
+  ///
+  /// In zh, this message translates to:
+  /// **'请输入账号、密码和 5 位图形验证码。'**
+  String get managedLoginMissingFields;
+
+  /// No description provided for @managedLoginInvalidCredentials.
+  ///
+  /// In zh, this message translates to:
+  /// **'账号或密码不正确。'**
+  String get managedLoginInvalidCredentials;
+
+  /// No description provided for @managedLoginInvalidCaptcha.
+  ///
+  /// In zh, this message translates to:
+  /// **'验证码错误或已失效，请输入新的验证码。'**
+  String get managedLoginInvalidCaptcha;
+
+  /// No description provided for @managedBuiltOn.
+  ///
+  /// In zh, this message translates to:
+  /// **'基于 DSH-Go 构建'**
+  String get managedBuiltOn;
+
+  /// No description provided for @managedLegalNotice.
+  ///
+  /// In zh, this message translates to:
+  /// **'DSH-Go © ccch1mneyyy 及贡献者。Agent Mobile 按 AGPL-3.0 分发，不提供担保。你可以按下方许可条款再分发。'**
+  String get managedLegalNotice;
 
   /// No description provided for @marketSectionOfficial.
   ///

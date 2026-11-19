@@ -51,7 +51,10 @@ class AboutPage extends ConsumerWidget {
                 key: const ValueKey('settings-star'),
                 spot: Spots.star,
                 onTap: () => unawaited(
-                  openStarProject(ProviderScope.containerOf(context, listen: false), ScaffoldMessenger.maybeOf(context)),
+                  openStarProject(
+                    ProviderScope.containerOf(context, listen: false),
+                    ScaffoldMessenger.maybeOf(context),
+                  ),
                 ),
               ),
             SettingsTile(
@@ -61,48 +64,50 @@ class AboutPage extends ConsumerWidget {
                 applicationName: AppInfo.name,
                 applicationVersion: version,
                 applicationIcon: const Padding(padding: EdgeInsets.all(12), child: BrandMark(size: 56, tile: true)),
-                applicationLegalese: AppInfo.disclaimer,
+                applicationLegalese: ManagedBrand.isConfigured ? l10n.managedLegalNotice : AppInfo.disclaimer,
               ),
             ),
           ],
         ),
-        SettingsSection(
-          title: l10n.hubAboutAuthor,
-          children: [
-            const SettingsTile(title: 'dsh-Go · ccch1mneyyy'),
-            _authorLink(
-              context,
-              ref,
-              'about-author-bilibili',
-              l10n.hubAboutBilibili,
-              AppInfo.authorBilibiliName,
-              AppInfo.authorBilibiliUrl,
-            ),
-            _authorLink(context, ref, 'about-author-x', l10n.hubAboutX, AppInfo.authorXHandle, AppInfo.authorXUrl),
-            _authorLink(
-              context,
-              ref,
-              'about-author-github',
-              l10n.hubAboutGithub,
-              '@${AppInfo.author}',
-              AppInfo.authorGithubUrl,
-            ),
-          ],
-        ),
+        if (!ManagedBrand.isConfigured)
+          SettingsSection(
+            title: l10n.hubAboutAuthor,
+            children: [
+              const SettingsTile(title: AppInfo.author),
+              _authorLink(
+                context,
+                ref,
+                'about-author-bilibili',
+                l10n.hubAboutBilibili,
+                AppInfo.authorBilibiliName,
+                AppInfo.authorBilibiliUrl,
+              ),
+              _authorLink(context, ref, 'about-author-x', l10n.hubAboutX, AppInfo.authorXHandle, AppInfo.authorXUrl),
+              _authorLink(
+                context,
+                ref,
+                'about-author-github',
+                l10n.hubAboutGithub,
+                '@${AppInfo.author}',
+                AppInfo.authorGithubUrl,
+              ),
+            ],
+          ),
         Padding(
           padding: const EdgeInsets.fromLTRB(24, 8, 24, 0),
           child: Column(
             children: [
               BrandMark(size: 18, color: colors.textDisabled),
               const SizedBox(height: 10),
+              if (!ManagedBrand.isConfigured)
+                Text(
+                  AppInfo.slogan,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.labelSmall?.copyWith(color: colors.textTertiary),
+                ),
+              if (!ManagedBrand.isConfigured) const SizedBox(height: 8),
               Text(
-                AppInfo.slogan,
-                textAlign: TextAlign.center,
-                style: theme.textTheme.labelSmall?.copyWith(color: colors.textTertiary),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                AppInfo.disclaimer,
+                ManagedBrand.isConfigured ? l10n.managedBuiltOn : AppInfo.disclaimer,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.labelSmall?.copyWith(color: colors.textTertiary),
               ),

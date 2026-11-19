@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'managed/brand.dart';
+import 'managed/model_sync.dart';
+
 import 'companion/companion_initiative_owner.dart' show companionInitiativeProvider;
 import 'l10n/l10n.dart';
 import 'performance/performance_state.dart';
@@ -158,6 +161,7 @@ class _DshAppState extends ConsumerState<DshApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    if (ManagedBrand.isConfigured) ref.listen(managedModelSyncProvider, (_, _) {});
     // 刷新率设置改动时告诉原生;setMode 对同一个值不做任何事。
     unawaited(RefreshRateService.instance.setMode(ref.watch(performancePrefsProvider.select((p) => p.refreshRate))));
     final themeMode = ref.watch(uiThemeModeProvider.select((s) => s.value));

@@ -54,7 +54,7 @@ class ManagedModelGateway {
         return await _error(output, 404, 'Unsupported model endpoint');
       }
       if (!_matchesKey(request.headers.value(HttpHeaders.authorizationHeader))) {
-        return await _error(output, 401, 'Reconnect the YushuHub model service');
+        return await _error(output, 401, 'Sign in again to use the official model service');
       }
       const limit = 20 * 1024 * 1024;
       final bytes = BytesBuilder(copy: false);

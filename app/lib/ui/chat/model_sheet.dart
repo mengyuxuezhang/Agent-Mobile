@@ -13,6 +13,10 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../managed/brand.dart';
+import '../../managed/model_sync.dart';
+import '../../managed/session.dart';
+import '../../state/hosts_state.dart';
 import '../../state/models_state.dart';
 import '../../state/settings_state.dart';
 import '../common/app_sheet.dart';
@@ -493,6 +497,7 @@ class _ModelSheetState extends ConsumerState<_ModelSheet> {
     final view = ref.watch(modelListViewProvider);
     final catalog = view.value;
     final active = identical(_scope, ref.watch(modelSelectionScopeProvider));
+    final managedLocal = ManagedBrand.isConfigured && ref.watch(activeHostProvider).isLocal;
 
     final Widget body;
     var picking = false;
@@ -521,11 +526,13 @@ class _ModelSheetState extends ConsumerState<_ModelSheet> {
           if (group.models.isNotEmpty) group,
       ];
       if (groups.isEmpty) {
-        body = _EmptyCatalog(
-          // A failing provider counts: something is set up, just not working.
-          configured: ref.watch(settingsProvider.select((s) => s.hasModelAccess)) || catalog.failures.isNotEmpty,
-          failure: catalog.failures.isEmpty ? null : catalog.failures.first.message,
-        );
+        body = managedLocal
+            ? _managedEmpty(ref, l10n)
+            : _EmptyCatalog(
+                // A failing provider counts: something is set up, just not working.
+                configured: ref.watch(settingsProvider.select((s) => s.hasModelAccess)) || catalog.failures.isNotEmpty,
+                failure: catalog.failures.isEmpty ? null : catalog.failures.first.message,
+              );
       } else {
         picking = true;
         body = _picker(groups, findModel(catalog, _selection), readOnly: view.readOnly || !active);
@@ -573,6 +580,23 @@ class _ModelSheetState extends ConsumerState<_ModelSheet> {
       ),
     );
     return UiTrace(scope: 'models', child: sheet);
+  }
+
+  Widget _managedEmpty(WidgetRef ref, L10n l10n) {
+    final signedIn = ref.watch(managedSignedInProvider);
+    final project = ref.watch(managedModelCatalogProvider);
+    final sync = ref.watch(managedModelSyncProvider);
+    if (signedIn && (project.isLoading || sync.isLoading)) return const _Loading();
+    return EmptyView(
+      padding: _emptyPadding,
+      icon: AppIcons.offline,
+      title: !signedIn
+          ? l10n.managedModelsSignIn
+          : project.hasError || sync.hasError
+          ? l10n.viewModelLoadFailed
+          : l10n.managedModelsEmpty,
+      action: const ManageModelsLink(),
+    );
   }
 
   Widget _picker(List<ProviderGroup> groups, ModelInfo? selected, {required bool readOnly}) {

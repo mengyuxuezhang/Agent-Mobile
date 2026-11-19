@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show LicenseEntryWithLineBreaks, LicenseRegistry;
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -10,6 +11,7 @@ import 'dev/frame_probe.dart';
 import 'diagnostics/app_error_log.dart';
 import 'launch/launch_state.dart';
 import 'links/page_links.dart' show registerPageLink, tavernPageLink;
+import 'managed/brand.dart';
 import 'runtime/local_paths.dart';
 import 'state/locale_state.dart';
 import 'ui/common/third_party_licenses.dart';
@@ -31,6 +33,12 @@ Future<void> _startApp() async {
   // MIT / OFL notices must ship with the APK, not just the sources.
   registerThirdPartyLicenses();
   registerFontLicenses();
+  if (ManagedBrand.isConfigured) {
+    LicenseRegistry.addLicense(() async* {
+      final license = await rootBundle.loadString('assets/licenses/AGPL-3.0.txt');
+      yield LicenseEntryWithLineBreaks(const ['Agent Mobile / DSH-Go'], license);
+    });
+  }
   // dshgo://open/tavern: the page lives in ui/, which links/ does not import.
   registerPageLink(tavernPageLink, () => const TavernHomePage());
   // The effects' shaders load now, so the first wave or metal word is not a plain fallback.

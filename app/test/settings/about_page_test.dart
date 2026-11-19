@@ -1,6 +1,7 @@
 import 'dart:ui' show SemanticsAction;
 
 import 'package:dsh_app/l10n/l10n.dart';
+import 'package:dsh_app/managed/brand.dart';
 import 'package:dsh_app/state/star_prompt.dart';
 import 'package:dsh_app/state/update_state.dart';
 import 'package:dsh_app/ui/settings/about_page.dart';
@@ -93,6 +94,19 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(row);
     await tester.pumpAndSettle();
+  }
+
+  if (ManagedBrand.isConfigured) {
+    testWidgets('the branded about page shows the source attribution and license entry', (tester) async {
+      await pump(tester, scale: 1.3);
+      expect(find.text('基于 DSH-Go 构建'), findsOneWidget);
+      expect(find.text('开源许可'), findsOneWidget);
+      for (final (key, _) in _profiles) {
+        expect(find.byKey(ValueKey(key)), findsNothing);
+      }
+      expect(find.text('DSH Go 原作者'), findsNothing);
+    });
+    return;
   }
 
   for (final locale in AppLocale.supported) {

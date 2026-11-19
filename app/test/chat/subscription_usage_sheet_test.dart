@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dsh_app/managed/brand.dart';
 import 'package:dsh_app/state/balance_state.dart';
 import 'package:dsh_app/state/subscriptions_state.dart';
 import 'package:dsh_app/state/usage_state.dart';
@@ -31,6 +32,30 @@ class _FakeBalanceController extends BalanceController {
 }
 
 void main() {
+  testWidgets('the usage sheet retains conversation stats and follows the brand balance policy', (tester) async {
+    var balanceReads = 0;
+    await tester.pumpWidget(
+      testApp(
+        const Scaffold(body: UsageSheet(sessionId: 's')),
+        overrides: [
+          sessionUsageProvider.overrideWith2(
+            (id) => FakeUsage(id, const SessionUsage(uncachedInput: 62000, output: 750)),
+          ),
+          balanceProvider.overrideWith(() {
+            balanceReads++;
+            return _FakeBalanceController();
+          }),
+        ],
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('上下文'), findsOneWidget);
+    expect(find.text('本对话'), findsOneWidget);
+    expect(find.text('750'), findsOneWidget);
+    expect(find.byType(BalanceCard), ManagedBrand.isConfigured ? findsNothing : findsOneWidget);
+    expect(balanceReads, ManagedBrand.isConfigured ? 0 : 1);
+  });
+
   testWidgets('OAuth usage replaces DeepSeek balance and labels reported windows', (tester) async {
     await tester.pumpWidget(
       testApp(
@@ -75,7 +100,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(BalanceCard), findsOneWidget);
+    expect(find.byType(BalanceCard), ManagedBrand.isConfigured ? findsNothing : findsOneWidget);
     expect(find.text('Codex · 订阅额度'), findsNothing);
     expect(requests, 0);
   });

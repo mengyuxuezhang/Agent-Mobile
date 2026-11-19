@@ -4,6 +4,7 @@
 // there. docs/design/settings-ia.md §4.5.
 
 import '../../../l10n/l10n.dart';
+import '../../../managed/brand.dart';
 import '../../features/feature_catalog.dart' show FeatureItem, FeatureSection;
 import '../index/spots.dart';
 
@@ -122,6 +123,7 @@ List<SearchHit> searchSettings(
   if (q.isEmpty) return const [];
   final hits = <SearchHit>[];
   for (final spot in spots) {
+    if (ManagedBrand.isConfigured && identical(spot, Spots.addProvider)) continue;
     if (!androidFeatures && SettingsIndex.androidOnly(spot) && !(ios && spot.iosToo)) continue;
     if ((androidFeatures || ios) && spot.ohosOnly) continue;
     if (ios && (spot.iosLacks || identical(spot, Spots.notifyLive))) continue;

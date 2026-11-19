@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../managed/brand.dart';
+import '../../managed/models_page.dart';
 import '../../state/account_state.dart';
 import '../../state/connection_state.dart';
 import '../../state/models_state.dart';
@@ -42,6 +44,7 @@ class ProvidersPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ManagedBrand.isConfigured) return const ManagedModelsPage();
     final l10n = context.l10n;
     final conn = ref.watch(readListLiveConnectionProvider);
     final async = ref.watch(customProvidersProvider);

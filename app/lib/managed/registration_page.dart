@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/l10n.dart';
+import 'auth_layout.dart';
 import 'client.dart';
 
 class ManagedRegistrationPage extends StatefulWidget {
@@ -22,6 +23,7 @@ class _ManagedRegistrationPageState extends State<ManagedRegistrationPage> {
   static final _validEmail = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
   ({String username, String email})? _sentTo;
   String? _message;
+  bool _messageIsError = true;
   bool _busy = false;
 
   Future<void> _submit({required bool sendCode}) async {
@@ -33,16 +35,23 @@ class _ManagedRegistrationPageState extends State<ManagedRegistrationPage> {
     final code = _code.text.trim();
     final password = _password.text;
     if (!_validUsername.hasMatch(username) || email.length > 190 || !_validEmail.hasMatch(email)) {
-      setState(() => _message = l10n.managedRegistrationIdentity);
+      setState(() {
+        _messageIsError = true;
+        _message = l10n.managedRegistrationIdentity;
+      });
       return;
     }
     if (!sendCode && (_sentTo != identity || code.length != 6 || password.length < 6)) {
-      setState(() => _message = l10n.managedRegistrationCodeAndPassword);
+      setState(() {
+        _messageIsError = true;
+        _message = l10n.managedRegistrationCodeAndPassword;
+      });
       return;
     }
     setState(() {
       _busy = true;
       _message = null;
+      _messageIsError = true;
     });
     try {
       if (sendCode) {
@@ -52,10 +61,14 @@ class _ManagedRegistrationPageState extends State<ManagedRegistrationPage> {
           _sentTo = identity;
           _code.clear();
           _message = l10n.managedRegistrationSent;
+          _messageIsError = false;
         });
       } else {
         final token = await widget.client.register(username: username, email: email, password: password, code: code);
-        if (mounted) Navigator.of(context).pop(token);
+        if (mounted) {
+          TextInput.finishAutofillContext();
+          Navigator.of(context).pop(token);
+        }
       }
     } on ManagedApiError catch (error) {
       if (!mounted) return;
@@ -88,58 +101,69 @@ class _ManagedRegistrationPageState extends State<ManagedRegistrationPage> {
     final l10n = context.l10n;
     return PopScope(
       canPop: !_busy,
-      child: Scaffold(
-        appBar: AppBar(title: Text(l10n.managedRegister)),
-        body: SafeArea(
-          child: ListView(
-            padding: const EdgeInsets.all(24),
-            children: [
-              Text(l10n.managedRegistrationIntro),
-              if (_busy) const LinearProgressIndicator(),
-              TextField(
-                controller: _username,
-                decoration: InputDecoration(labelText: l10n.managedUsername),
-                enabled: !_busy,
-                maxLength: 120,
-                autocorrect: false,
-                textInputAction: TextInputAction.next,
-              ),
-              TextField(
-                controller: _email,
-                decoration: InputDecoration(labelText: l10n.managedRegistrationEmail),
-                enabled: !_busy,
-                keyboardType: TextInputType.emailAddress,
-                autocorrect: false,
-                textInputAction: TextInputAction.next,
-              ),
-              TextButton(
+      child: ManagedAuthLayout(
+        title: l10n.managedRegister,
+        subtitle: l10n.managedRegistrationIntro,
+        footer: TextButton(
+          onPressed: _busy ? null : () => Navigator.of(context).pop(),
+          child: Text(l10n.managedBackToLogin),
+        ),
+        children: [
+          TextField(
+            controller: _username,
+            decoration: managedAuthInput(context, l10n.managedUsername, Icons.person_outline),
+            enabled: !_busy,
+            autocorrect: false,
+            autofillHints: const [AutofillHints.newUsername],
+            inputFormatters: [LengthLimitingTextInputFormatter(120)],
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _email,
+            decoration: managedAuthInput(context, l10n.managedRegistrationEmail, Icons.mail_outline),
+            enabled: !_busy,
+            keyboardType: TextInputType.emailAddress,
+            autocorrect: false,
+            autofillHints: const [AutofillHints.email],
+            inputFormatters: [LengthLimitingTextInputFormatter(190)],
+            textInputAction: TextInputAction.next,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _code,
+            decoration: managedAuthInput(
+              context,
+              l10n.managedRegistrationEmailCode,
+              Icons.verified_user_outlined,
+              suffix: TextButton(
                 onPressed: _busy ? null : () => _submit(sendCode: true),
                 child: Text(l10n.managedRegistrationSendCode),
               ),
-              TextField(
-                controller: _code,
-                decoration: InputDecoration(labelText: l10n.managedRegistrationEmailCode),
-                enabled: !_busy,
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
-                textInputAction: TextInputAction.next,
-              ),
-              TextField(
-                controller: _password,
-                decoration: InputDecoration(labelText: l10n.managedPassword),
-                enabled: !_busy,
-                obscureText: true,
-                autocorrect: false,
-                enableSuggestions: false,
-                inputFormatters: [LengthLimitingTextInputFormatter(1024)],
-                onSubmitted: (_) => _submit(sendCode: false),
-              ),
-              const SizedBox(height: 16),
-              if (_message case final message?) Text(message, semanticsLabel: message),
-              FilledButton(onPressed: _busy ? null : () => _submit(sendCode: false), child: Text(l10n.managedRegister)),
-            ],
+            ),
+            enabled: !_busy,
+            keyboardType: TextInputType.number,
+            autofillHints: const [AutofillHints.oneTimeCode],
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(6)],
+            textInputAction: TextInputAction.next,
           ),
-        ),
+          const SizedBox(height: 12),
+          ManagedPasswordField(
+            controller: _password,
+            enabled: !_busy,
+            autofillHint: AutofillHints.newPassword,
+            onSubmitted: (_) => _submit(sendCode: false),
+          ),
+          const SizedBox(height: 16),
+          if (_message case final message?) ManagedAuthMessage(message, error: _messageIsError),
+          FilledButton(
+            onPressed: _busy ? null : () => _submit(sendCode: false),
+            style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(50)),
+            child: _busy
+                ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                : Text(l10n.managedRegister),
+          ),
+        ],
       ),
     );
   }

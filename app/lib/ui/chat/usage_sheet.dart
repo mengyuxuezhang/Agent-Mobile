@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../managed/brand.dart';
 import '../../state/usage_state.dart';
 import '../../state/subscriptions_state.dart';
 import '../../state/providers_state.dart';
@@ -143,7 +144,7 @@ class _RingPainter extends CustomPainter {
   bool shouldRepaint(_RingPainter old) => old.fraction != fraction || old.track != track || old.fill != fill;
 }
 
-/// 用量弹层:上下文窗口、本对话的 token、DeepSeek 余额。
+/// 用量弹层：上下文窗口、本对话的 token 和适用的服务额度。
 Future<void> showUsageSheet(BuildContext context, {required String sessionId, ModelSelection? model}) {
   return showAppSheet<void>(
     context,
@@ -186,11 +187,13 @@ class UsageSheet extends ConsumerWidget {
           children: [
             SheetTitleBar(l10n.activityUsage),
             SessionUsageSections(usage: usage, pricing: pricing, sheet: true, margin: _margin),
-            const SizedBox(height: 16),
-            if (Subscription.fromWire(model?.provider) case final subscription?)
-              _SubscriptionQuota(subscription: subscription, margin: _margin)
-            else
+            if (Subscription.fromWire(model?.provider) case final subscription?) ...[
+              const SizedBox(height: 16),
+              _SubscriptionQuota(subscription: subscription, margin: _margin),
+            ] else if (!ManagedBrand.isConfigured) ...[
+              const SizedBox(height: 16),
               BalanceCard(title: l10n.activityUsageBalance, margin: _margin),
+            ],
           ],
         ),
       ),
@@ -209,7 +212,9 @@ class _SubscriptionQuota extends ConsumerWidget {
     final profile = ref.watch(subscriptionProfileProvider(subscription));
     final currentProfile = profile.isLoading || profile.hasError ? null : profile.value;
     if (currentProfile != null && !isSubscriptionRoute(currentProfile)) {
-      return BalanceCard(title: l10n.activityUsageBalance, margin: margin);
+      return ManagedBrand.isConfigured
+          ? const SizedBox.shrink()
+          : BalanceCard(title: l10n.activityUsageBalance, margin: margin);
     }
     Widget message(String text) => SheetGroup(
       margin: margin,

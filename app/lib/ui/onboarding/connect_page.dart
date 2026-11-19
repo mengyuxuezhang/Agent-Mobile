@@ -162,7 +162,7 @@ class _ConnectPageState extends ConsumerState<ConnectPage> {
 
   Future<void> _managedAccount() async {
     final connected = await Navigator.of(context).push<bool>(
-      MaterialPageRoute(builder: (_) => const ManagedAccountPage(finishOnConnection: true)),
+      MaterialPageRoute(builder: (_) => const ManagedAccountPage(finishOnSignIn: true)),
     );
     if (connected == true && mounted) await _skip();
   }
