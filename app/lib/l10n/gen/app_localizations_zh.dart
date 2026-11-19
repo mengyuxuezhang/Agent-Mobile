@@ -5816,7 +5816,10 @@ class L10nZh extends L10n {
   String get desktopRemoteLogin => '登录账号';
 
   @override
-  String get desktopRemotePairInstructions => '在电脑的系统托盘打开「手机远程协作」，确认连接后复制配对码。';
+  String get desktopRemotePairInstructions => '在电脑托盘打开「手机远程协作」，扫描二维码或输入显示的配对码。';
+
+  @override
+  String get desktopRemoteScan => '扫描配对二维码';
 
   @override
   String get desktopRemoteCode => '配对码';

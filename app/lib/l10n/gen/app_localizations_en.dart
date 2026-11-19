@@ -6161,7 +6161,10 @@ class L10nEn extends L10n {
 
   @override
   String get desktopRemotePairInstructions =>
-      'Open Mobile remote work in the desktop tray, confirm the connection and copy the pairing code.';
+      'Open Mobile remote work in the desktop tray, then scan the QR code or enter the pairing code.';
+
+  @override
+  String get desktopRemoteScan => 'Scan pairing QR code';
 
   @override
   String get desktopRemoteCode => 'Pairing code';

@@ -10799,8 +10799,14 @@ abstract class L10n {
   /// No description provided for @desktopRemotePairInstructions.
   ///
   /// In zh, this message translates to:
-  /// **'在电脑的系统托盘打开「手机远程协作」，确认连接后复制配对码。'**
+  /// **'在电脑托盘打开「手机远程协作」，扫描二维码或输入显示的配对码。'**
   String get desktopRemotePairInstructions;
+
+  /// No description provided for @desktopRemoteScan.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫描配对二维码'**
+  String get desktopRemoteScan;
 
   /// No description provided for @desktopRemoteCode.
   ///

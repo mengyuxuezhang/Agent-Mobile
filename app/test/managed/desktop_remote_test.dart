@@ -1,13 +1,75 @@
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:dsh_app/l10n/l10n.dart';
+import 'package:dsh_app/managed/remote_desktop/client.dart';
+import 'package:dsh_app/managed/remote_desktop/screen.dart';
+import 'package:dsh_app/managed/session.dart';
+import 'package:dsh_app/ui/remote/pairing_page.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-import 'package:dsh_app/managed/remote_desktop/client.dart';
-
 void main() {
+  testWidgets('scan action passes the decoded QR to the managed device session', (tester) async {
+    final session = ManagedSession()..token = 'phone-test-session';
+    final client = _PairScreenClient();
+    const payload = 'agent-remote-v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          managedSessionProvider.overrideWithValue(session),
+          desktopRemoteProvider.overrideWithValue(client),
+          pairingScannerProvider.overrideWithValue(
+            (context, onCode) => TextButton(onPressed: () => onCode(payload), child: const Text('fixture scanner')),
+          ),
+        ],
+        child: const MaterialApp(
+          locale: Locale('zh'),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: DesktopRemoteScreen(),
+        ),
+      ),
+    );
+    await tester.tap(find.text('扫描配对二维码'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('fixture scanner'));
+    await tester.pumpAndSettle();
+    expect(client.code, payload);
+    expect(find.text('电脑工作区'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox.shrink());
+    session.dispose();
+  });
+  test('grouped manual code and scanned QR claim the same pairing', () async {
+    final entropy = List<int>.filled(16, 7);
+    final key = (await Sha256().hash([...utf8.encode('agent-remote-manual-v1\u0000'), ...entropy])).bytes;
+    String encoded(List<int> value) => base64Url.encode(value).replaceAll('=', '');
+    final manual = RegExp('.{1,4}').allMatches(encoded(entropy)).map((group) => group.group(0)).join(' ');
+    final submitted = <String>[];
+    final client = DesktopRemoteClient(
+      MockClient((request) async {
+        submitted.add((jsonDecode(request.body) as RemoteJson)['fingerprint'] as String);
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {'pairId': '2576a4b4-4b6d-4ad5-9bb8-cb494623198d'},
+          }),
+          200,
+        );
+      }),
+      Uri.parse('https://example.test/api/'),
+      'example-brand',
+      () => 'existing-phone-login',
+    );
+    await client.pair(manual);
+    await client.pair('agent-remote-v1:${encoded(key)}');
+    expect(submitted, hasLength(2));
+    expect(submitted.first, submitted.last);
+  });
+
   test('binds the encrypted request to the paired account and discards it after login changes', () async {
     const pairId = '2576a4b4-4b6d-4ad5-9bb8-cb494623198d';
     final bytes = List<int>.filled(32, 7);
@@ -69,4 +131,30 @@ void main() {
     );
     expect(calls, 3);
   });
+}
+
+class _PairScreenClient extends DesktopRemoteClient {
+  _PairScreenClient()
+    : super(
+        MockClient((_) async => http.Response('', 500)),
+        Uri.parse('https://example.test/api/'),
+        'fixture',
+        () => 'phone-test-session',
+      );
+
+  String? code;
+
+  @override
+  bool get connected => code != null;
+
+  @override
+  Future<void> pair(String value) async {
+    code = value;
+  }
+
+  @override
+  Future<RemoteJson> request(String method, [RemoteJson fields = const {}]) async {
+    expect(method, 'workspaces/list');
+    return {'workspaces': []};
+  }
 }

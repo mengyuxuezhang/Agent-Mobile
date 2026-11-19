@@ -50,12 +50,19 @@ class DesktopRemoteClient {
 
   Future<void> pair(String code) async {
     final auth = _auth();
-    final value = code.trim();
-    if (!RegExp(r'^agent-remote-v1:[A-Za-z0-9_-]{43}$').hasMatch(value)) {
+    final value = code.replaceAll(RegExp(r'\s+'), '');
+    final manual = RegExp(r'^[A-Za-z0-9_-]{22}$').hasMatch(value);
+    if (!manual && !RegExp(r'^agent-remote-v1:[A-Za-z0-9_-]{43}$').hasMatch(value)) {
       throw const DesktopRemoteException('INVALID_CODE');
     }
-    final encoded = value.substring(_prefix.length + 1);
-    final bytes = base64Url.decode(base64Url.normalize(encoded));
+    final encoded = manual ? value : value.substring(_prefix.length + 1);
+    final decoded = base64Url.decode(base64Url.normalize(encoded));
+    if (base64Url.encode(decoded).replaceAll('=', '') != encoded) {
+      throw const DesktopRemoteException('INVALID_CODE');
+    }
+    final bytes = manual
+        ? (await Sha256().hash([...utf8.encode('agent-remote-manual-v1\u0000'), ...decoded])).bytes
+        : decoded;
     final digest = await Sha256().hash(bytes);
     final fingerprint = digest.bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     final result = await _call('POST', 'claims', auth, {'fingerprint': fingerprint});

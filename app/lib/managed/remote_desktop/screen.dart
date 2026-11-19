@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../ui/remote/pairing_page.dart' show pairingScannerProvider;
 import '../account_page.dart';
 import '../session.dart';
 import 'client.dart';
@@ -68,6 +69,43 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
       _recentCursor = null;
     });
     if (_overview) await _loadRecent();
+  }
+
+  Future<void> _pair(String code) async {
+    await _client.pair(code);
+    if (!mounted) return;
+    _code.clear();
+    setState(() {
+      _workspace = null;
+      _workspaces = [];
+      _sessions = [];
+      _recent = [];
+      _recentCursor = null;
+      _overview = false;
+    });
+    await _loadWorkspaces();
+  }
+
+  Future<void> _scan() async {
+    final scanner = ref.read(pairingScannerProvider);
+    var handled = false;
+    final code = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: Text(context.l10n.desktopRemoteScan)),
+          body: SafeArea(
+            child: Center(
+              child: scanner(context, (value) {
+                if (handled || ModalRoute.of(context)?.isCurrent != true) return;
+                handled = true;
+                Navigator.pop(context, value);
+              }),
+            ),
+          ),
+        ),
+      ),
+    );
+    if (mounted && code != null) await _run(() => _pair(code));
   }
 
   Future<void> _loadRecent([String? cursor]) async {
@@ -172,9 +210,16 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
               ),
             ] else if (!linked) ...[
               _Feedback(text: l10n.desktopRemotePairInstructions),
+              FilledButton.icon(
+                onPressed: _busy ? null : _scan,
+                icon: const Icon(Icons.qr_code_scanner),
+                label: Text(l10n.desktopRemoteScan),
+              ),
+              const SizedBox(height: 12),
               TextField(
                 controller: _code,
                 autocorrect: false,
+                textCapitalization: TextCapitalization.none,
                 enableSuggestions: false,
                 decoration: InputDecoration(
                   labelText: l10n.desktopRemoteCode,
@@ -192,23 +237,8 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              FilledButton.icon(
-                onPressed: _busy
-                    ? null
-                    : () => _run(() async {
-                        await _client.pair(_code.text);
-                        if (!mounted) return;
-                        _code.clear();
-                        setState(() {
-                          _workspace = null;
-                          _workspaces = [];
-                          _sessions = [];
-                          _recent = [];
-                          _recentCursor = null;
-                          _overview = false;
-                        });
-                        await _loadWorkspaces();
-                      }),
+              OutlinedButton.icon(
+                onPressed: _busy ? null : () => _run(() => _pair(_code.text)),
                 icon: const Icon(Icons.link),
                 label: Text(l10n.desktopRemoteConnect),
               ),
