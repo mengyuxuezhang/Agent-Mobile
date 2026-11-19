@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from build_number import build_number
 from urllib.parse import urlsplit
 
 
@@ -37,6 +38,7 @@ def brand_inputs(config):
         "AGENT_PROJECT_ID": project,
         "AGENT_APP_NAME": name.strip(),
         "AGENT_API_BASE_URL": api.rstrip("/") + "/",
+        "AGENT_UPDATE_FEED": api.rstrip("/") + f"/client/android-download/{project}/update.json",
         "AGENT_BRAND_PRIMARY": color,
         "AGENT_ANDROID_APPLICATION_ID": application_id,
     }
@@ -96,7 +98,8 @@ def main():
                     str(root / "tooling/check_runtime_bundle.py"), args.abi], cwd=root, check=True)
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", args.version):
         parser.error("Version must use major.minor.patch")
-    defines["DSH_APP_VERSION"] = args.version
+    version_code = build_number()
+    defines["DSH_APP_VERSION"] = f"{args.version}+{version_code}"
     mode = "release" if args.release else "debug"
     if args.release:
         defines["AGENT_ANDROID_REQUIRE_SIGNING"] = "true"
@@ -109,6 +112,7 @@ def main():
             subprocess.run(
                 [args.flutter, "build", "apk", f"--{mode}",
                  "--flavor", args.abi, "--target-platform", platform, "--build-name", args.version,
+                 "--build-number", str(version_code),
                  f"--dart-define-from-file={path}"],
                 cwd=root / "app", check=True,
             )

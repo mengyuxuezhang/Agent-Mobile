@@ -18,7 +18,9 @@ val flutterDefines = providers.gradleProperty("dart-defines").orNull.orEmpty()
     .associate { it.substringBefore('=') to it.substringAfter('=') }
 
 val keyProps = Properties().apply {
-    rootProject.file("key.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+    val signingFile = System.getenv("AGENT_ANDROID_SIGNING_PROPERTIES")
+        ?.takeIf { it.isNotBlank() }?.let { file(it) } ?: rootProject.file("key.properties")
+    signingFile.takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
 // Debug builds use the release key only when it is all there; they are never the build
