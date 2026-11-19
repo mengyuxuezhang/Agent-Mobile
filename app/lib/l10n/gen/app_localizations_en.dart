@@ -6145,6 +6145,111 @@ class L10nEn extends L10n {
   String get companionAdaptNetwork => 'no connection';
 
   @override
+  String get desktopRemoteTitle => 'Connect to desktop';
+
+  @override
+  String get desktopRemoteRefresh => 'Refresh';
+
+  @override
+  String get desktopRemoteDisconnect => 'Disconnect';
+
+  @override
+  String get desktopRemoteSignIn => 'Sign in with the same account as on your computer.';
+
+  @override
+  String get desktopRemoteLogin => 'Sign in';
+
+  @override
+  String get desktopRemotePairInstructions =>
+      'Open Mobile remote work in the desktop tray, choose a workspace and copy the pairing code.';
+
+  @override
+  String get desktopRemoteCode => 'Pairing code';
+
+  @override
+  String get desktopRemotePaste => 'Paste pairing code';
+
+  @override
+  String get desktopRemoteConnect => 'Connect';
+
+  @override
+  String get desktopRemoteWorkspaces => 'Desktop workspaces';
+
+  @override
+  String get desktopRemoteEmptyWorkspaces => 'No desktop workspaces are available.';
+
+  @override
+  String get desktopRemoteNewChat => 'New desktop chat';
+
+  @override
+  String get desktopRemoteEmptyChats => 'This workspace has no chats yet.';
+
+  @override
+  String get desktopRemoteStop => 'Stop desktop task';
+
+  @override
+  String get desktopRemoteDisconnected => 'Desktop disconnected. Go back and pair again.';
+
+  @override
+  String get desktopRemoteOnComputer => 'Respond to this request on your computer.';
+
+  @override
+  String get desktopRemoteDecline => 'Decline';
+
+  @override
+  String get desktopRemoteDone => 'Completed';
+
+  @override
+  String get desktopRemoteTaskFailed => 'Task failed';
+
+  @override
+  String get desktopRemoteRunning => 'Running';
+
+  @override
+  String get desktopRemoteHistory => 'Load earlier messages';
+
+  @override
+  String get desktopRemoteWrite => 'What should your computer do?';
+
+  @override
+  String get desktopRemoteSend => 'Send to desktop';
+
+  @override
+  String get desktopRemoteBadCode =>
+      'The code is invalid or expired. Generate a new code and check that both devices use the same account.';
+
+  @override
+  String get desktopRemoteUnavailable => 'This workspace or chat is no longer available.';
+
+  @override
+  String get desktopRemoteOffline => 'Desktop is offline. Check that the desktop app is running, then refresh.';
+
+  @override
+  String get desktopRemoteTimeout => 'Desktop did not respond in time. Refresh to check the task status.';
+
+  @override
+  String get desktopRemoteBusy => 'The desktop is working. Wait for the current task to finish.';
+
+  @override
+  String get desktopRemoteLocalControl =>
+      'Open the chat on your computer and restore default permissions before continuing.';
+
+  @override
+  String get desktopRemoteApprovalGone => 'This request was already resolved or has expired.';
+
+  @override
+  String get desktopRemoteCredits => 'This account has insufficient credits.';
+
+  @override
+  String get desktopRemoteError => 'The desktop service is temporarily unavailable. Try again shortly.';
+
+  @override
+  String get desktopRemoteFullMessage => 'View full message';
+
+  @override
+  String get desktopRemoteMore => 'Load more';
+
+  @override
   String get automaticDiagnosticsRecover => 'Recover local records';
 
   @override

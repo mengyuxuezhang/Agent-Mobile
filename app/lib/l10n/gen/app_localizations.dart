@@ -10766,6 +10766,210 @@ abstract class L10n {
   /// **'网络不通'**
   String get companionAdaptNetwork;
 
+  /// No description provided for @desktopRemoteTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接桌面端'**
+  String get desktopRemoteTitle;
+
+  /// No description provided for @desktopRemoteRefresh.
+  ///
+  /// In zh, this message translates to:
+  /// **'刷新'**
+  String get desktopRemoteRefresh;
+
+  /// No description provided for @desktopRemoteDisconnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'断开连接'**
+  String get desktopRemoteDisconnect;
+
+  /// No description provided for @desktopRemoteSignIn.
+  ///
+  /// In zh, this message translates to:
+  /// **'请先登录与电脑相同的品牌账号。'**
+  String get desktopRemoteSignIn;
+
+  /// No description provided for @desktopRemoteLogin.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录账号'**
+  String get desktopRemoteLogin;
+
+  /// No description provided for @desktopRemotePairInstructions.
+  ///
+  /// In zh, this message translates to:
+  /// **'在电脑的系统托盘打开「手机远程协作」，选择工作区后复制配对码。'**
+  String get desktopRemotePairInstructions;
+
+  /// No description provided for @desktopRemoteCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对码'**
+  String get desktopRemoteCode;
+
+  /// No description provided for @desktopRemotePaste.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴配对码'**
+  String get desktopRemotePaste;
+
+  /// No description provided for @desktopRemoteConnect.
+  ///
+  /// In zh, this message translates to:
+  /// **'连接电脑'**
+  String get desktopRemoteConnect;
+
+  /// No description provided for @desktopRemoteWorkspaces.
+  ///
+  /// In zh, this message translates to:
+  /// **'电脑工作区'**
+  String get desktopRemoteWorkspaces;
+
+  /// No description provided for @desktopRemoteEmptyWorkspaces.
+  ///
+  /// In zh, this message translates to:
+  /// **'没有可用的电脑工作区。'**
+  String get desktopRemoteEmptyWorkspaces;
+
+  /// No description provided for @desktopRemoteNewChat.
+  ///
+  /// In zh, this message translates to:
+  /// **'新建电脑会话'**
+  String get desktopRemoteNewChat;
+
+  /// No description provided for @desktopRemoteEmptyChats.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个工作区还没有会话。'**
+  String get desktopRemoteEmptyChats;
+
+  /// No description provided for @desktopRemoteStop.
+  ///
+  /// In zh, this message translates to:
+  /// **'停止电脑任务'**
+  String get desktopRemoteStop;
+
+  /// No description provided for @desktopRemoteDisconnected.
+  ///
+  /// In zh, this message translates to:
+  /// **'电脑已断开。请返回连接页重新配对。'**
+  String get desktopRemoteDisconnected;
+
+  /// No description provided for @desktopRemoteOnComputer.
+  ///
+  /// In zh, this message translates to:
+  /// **'此请求请在电脑上确认。'**
+  String get desktopRemoteOnComputer;
+
+  /// No description provided for @desktopRemoteDecline.
+  ///
+  /// In zh, this message translates to:
+  /// **'拒绝'**
+  String get desktopRemoteDecline;
+
+  /// No description provided for @desktopRemoteDone.
+  ///
+  /// In zh, this message translates to:
+  /// **'完成'**
+  String get desktopRemoteDone;
+
+  /// No description provided for @desktopRemoteTaskFailed.
+  ///
+  /// In zh, this message translates to:
+  /// **'任务执行失败'**
+  String get desktopRemoteTaskFailed;
+
+  /// No description provided for @desktopRemoteRunning.
+  ///
+  /// In zh, this message translates to:
+  /// **'执行中'**
+  String get desktopRemoteRunning;
+
+  /// No description provided for @desktopRemoteHistory.
+  ///
+  /// In zh, this message translates to:
+  /// **'加载更早的消息'**
+  String get desktopRemoteHistory;
+
+  /// No description provided for @desktopRemoteWrite.
+  ///
+  /// In zh, this message translates to:
+  /// **'让电脑做什么？'**
+  String get desktopRemoteWrite;
+
+  /// No description provided for @desktopRemoteSend.
+  ///
+  /// In zh, this message translates to:
+  /// **'发送给电脑'**
+  String get desktopRemoteSend;
+
+  /// No description provided for @desktopRemoteBadCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'配对码无效或已过期。请在电脑上重新生成，并确认两端使用同一账号。'**
+  String get desktopRemoteBadCode;
+
+  /// No description provided for @desktopRemoteUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个工作区或会话已不可用。'**
+  String get desktopRemoteUnavailable;
+
+  /// No description provided for @desktopRemoteOffline.
+  ///
+  /// In zh, this message translates to:
+  /// **'电脑暂时离线。请确认桌面端仍在运行，再刷新。'**
+  String get desktopRemoteOffline;
+
+  /// No description provided for @desktopRemoteTimeout.
+  ///
+  /// In zh, this message translates to:
+  /// **'电脑响应超时，请刷新确认任务状态。'**
+  String get desktopRemoteTimeout;
+
+  /// No description provided for @desktopRemoteBusy.
+  ///
+  /// In zh, this message translates to:
+  /// **'电脑正在处理任务，请等待当前任务结束。'**
+  String get desktopRemoteBusy;
+
+  /// No description provided for @desktopRemoteLocalControl.
+  ///
+  /// In zh, this message translates to:
+  /// **'请在电脑上打开该会话并切回默认权限，再从手机操作。'**
+  String get desktopRemoteLocalControl;
+
+  /// No description provided for @desktopRemoteApprovalGone.
+  ///
+  /// In zh, this message translates to:
+  /// **'该申请已处理或失效。'**
+  String get desktopRemoteApprovalGone;
+
+  /// No description provided for @desktopRemoteCredits.
+  ///
+  /// In zh, this message translates to:
+  /// **'账号积分不足。'**
+  String get desktopRemoteCredits;
+
+  /// No description provided for @desktopRemoteError.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法连接桌面服务，请稍后再试。'**
+  String get desktopRemoteError;
+
+  /// No description provided for @desktopRemoteFullMessage.
+  ///
+  /// In zh, this message translates to:
+  /// **'查看全文'**
+  String get desktopRemoteFullMessage;
+
+  /// No description provided for @desktopRemoteMore.
+  ///
+  /// In zh, this message translates to:
+  /// **'继续加载'**
+  String get desktopRemoteMore;
+
   /// No description provided for @automaticDiagnosticsRecover.
   ///
   /// In zh, this message translates to:

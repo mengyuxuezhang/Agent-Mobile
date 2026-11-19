@@ -51,6 +51,7 @@ import '../plugins/seats/seat_probe.dart';
 import '../providers/providers_page.dart';
 import '../remote/host_status.dart';
 import '../remote/remote_screen.dart';
+import '../../managed/remote_desktop/screen.dart';
 import '../shell/brand_mark.dart';
 import '../shell/page_frame.dart';
 import '../theme/app_icons.dart';
@@ -288,6 +289,13 @@ class SettingsScreen extends ConsumerWidget {
         SettingsSection(
           title: l10n.hubGroupHosts,
           children: [
+            if (ManagedBrand.isConfigured)
+              SettingsTile(
+                icon: AppIcons.remoteHosts,
+                tint: SettingsHues.hosts,
+                title: l10n.desktopRemoteTitle,
+                onTap: () => _push(context, const DesktopRemoteScreen()),
+              ),
             SettingsTile(
               icon: AppIcons.engine,
               tint: SettingsHues.hosts,

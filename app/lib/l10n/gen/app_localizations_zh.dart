@@ -5801,6 +5801,108 @@ class L10nZh extends L10n {
   String get companionAdaptNetwork => '网络不通';
 
   @override
+  String get desktopRemoteTitle => '连接桌面端';
+
+  @override
+  String get desktopRemoteRefresh => '刷新';
+
+  @override
+  String get desktopRemoteDisconnect => '断开连接';
+
+  @override
+  String get desktopRemoteSignIn => '请先登录与电脑相同的品牌账号。';
+
+  @override
+  String get desktopRemoteLogin => '登录账号';
+
+  @override
+  String get desktopRemotePairInstructions => '在电脑的系统托盘打开「手机远程协作」，选择工作区后复制配对码。';
+
+  @override
+  String get desktopRemoteCode => '配对码';
+
+  @override
+  String get desktopRemotePaste => '粘贴配对码';
+
+  @override
+  String get desktopRemoteConnect => '连接电脑';
+
+  @override
+  String get desktopRemoteWorkspaces => '电脑工作区';
+
+  @override
+  String get desktopRemoteEmptyWorkspaces => '没有可用的电脑工作区。';
+
+  @override
+  String get desktopRemoteNewChat => '新建电脑会话';
+
+  @override
+  String get desktopRemoteEmptyChats => '这个工作区还没有会话。';
+
+  @override
+  String get desktopRemoteStop => '停止电脑任务';
+
+  @override
+  String get desktopRemoteDisconnected => '电脑已断开。请返回连接页重新配对。';
+
+  @override
+  String get desktopRemoteOnComputer => '此请求请在电脑上确认。';
+
+  @override
+  String get desktopRemoteDecline => '拒绝';
+
+  @override
+  String get desktopRemoteDone => '完成';
+
+  @override
+  String get desktopRemoteTaskFailed => '任务执行失败';
+
+  @override
+  String get desktopRemoteRunning => '执行中';
+
+  @override
+  String get desktopRemoteHistory => '加载更早的消息';
+
+  @override
+  String get desktopRemoteWrite => '让电脑做什么？';
+
+  @override
+  String get desktopRemoteSend => '发送给电脑';
+
+  @override
+  String get desktopRemoteBadCode => '配对码无效或已过期。请在电脑上重新生成，并确认两端使用同一账号。';
+
+  @override
+  String get desktopRemoteUnavailable => '这个工作区或会话已不可用。';
+
+  @override
+  String get desktopRemoteOffline => '电脑暂时离线。请确认桌面端仍在运行，再刷新。';
+
+  @override
+  String get desktopRemoteTimeout => '电脑响应超时，请刷新确认任务状态。';
+
+  @override
+  String get desktopRemoteBusy => '电脑正在处理任务，请等待当前任务结束。';
+
+  @override
+  String get desktopRemoteLocalControl => '请在电脑上打开该会话并切回默认权限，再从手机操作。';
+
+  @override
+  String get desktopRemoteApprovalGone => '该申请已处理或失效。';
+
+  @override
+  String get desktopRemoteCredits => '账号积分不足。';
+
+  @override
+  String get desktopRemoteError => '暂时无法连接桌面服务，请稍后再试。';
+
+  @override
+  String get desktopRemoteFullMessage => '查看全文';
+
+  @override
+  String get desktopRemoteMore => '继续加载';
+
+  @override
   String get automaticDiagnosticsRecover => '恢复本地记录';
 
   @override
