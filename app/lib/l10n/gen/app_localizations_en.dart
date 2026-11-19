@@ -6161,7 +6161,7 @@ class L10nEn extends L10n {
 
   @override
   String get desktopRemotePairInstructions =>
-      'Open Mobile remote work in the desktop tray, choose a workspace and copy the pairing code.';
+      'Open Mobile remote work in the desktop tray, confirm the connection and copy the pairing code.';
 
   @override
   String get desktopRemoteCode => 'Pairing code';
@@ -6248,6 +6248,19 @@ class L10nEn extends L10n {
 
   @override
   String get desktopRemoteMore => 'Load more';
+
+  @override
+  String get desktopRemoteRecentChats => 'Desktop chat history';
+
+  @override
+  String get desktopRemoteEmptyRecent => 'There are no desktop chats to continue.';
+
+  @override
+  String get desktopRemoteDefaultPermissions => 'Use default permissions';
+
+  @override
+  String get desktopRemoteDefaultPermissionsDescription =>
+      'This chat uses full access. Continue from your phone by switching this chat to default permissions on your computer.';
 
   @override
   String get automaticDiagnosticsRecover => 'Recover local records';

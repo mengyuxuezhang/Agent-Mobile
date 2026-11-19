@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-import '../../lib/managed/remote_desktop/client.dart';
+import 'package:dsh_app/managed/remote_desktop/client.dart';
 
 void main() {
   test('binds the encrypted request to the paired account and discards it after login changes', () async {

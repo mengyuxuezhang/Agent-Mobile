@@ -10799,7 +10799,7 @@ abstract class L10n {
   /// No description provided for @desktopRemotePairInstructions.
   ///
   /// In zh, this message translates to:
-  /// **'在电脑的系统托盘打开「手机远程协作」，选择工作区后复制配对码。'**
+  /// **'在电脑的系统托盘打开「手机远程协作」，确认连接后复制配对码。'**
   String get desktopRemotePairInstructions;
 
   /// No description provided for @desktopRemoteCode.
@@ -10969,6 +10969,30 @@ abstract class L10n {
   /// In zh, this message translates to:
   /// **'继续加载'**
   String get desktopRemoteMore;
+
+  /// No description provided for @desktopRemoteRecentChats.
+  ///
+  /// In zh, this message translates to:
+  /// **'电脑历史会话'**
+  String get desktopRemoteRecentChats;
+
+  /// No description provided for @desktopRemoteEmptyRecent.
+  ///
+  /// In zh, this message translates to:
+  /// **'电脑上还没有可继续的会话。'**
+  String get desktopRemoteEmptyRecent;
+
+  /// No description provided for @desktopRemoteDefaultPermissions.
+  ///
+  /// In zh, this message translates to:
+  /// **'切换到默认权限'**
+  String get desktopRemoteDefaultPermissions;
+
+  /// No description provided for @desktopRemoteDefaultPermissionsDescription.
+  ///
+  /// In zh, this message translates to:
+  /// **'这个会话在电脑上使用全开权限。确认后会同步切换为默认权限，再从手机继续。'**
+  String get desktopRemoteDefaultPermissionsDescription;
 
   /// No description provided for @automaticDiagnosticsRecover.
   ///

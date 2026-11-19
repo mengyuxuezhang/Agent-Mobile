@@ -4,7 +4,7 @@
   "desktopRemoteDisconnect": "Disconnect",
   "desktopRemoteSignIn": "Sign in with the same account as on your computer.",
   "desktopRemoteLogin": "Sign in",
-  "desktopRemotePairInstructions": "Open Mobile remote work in the desktop tray, choose a workspace and copy the pairing code.",
+  "desktopRemotePairInstructions": "Open Mobile remote work in the desktop tray, confirm the connection and copy the pairing code.",
   "desktopRemoteCode": "Pairing code",
   "desktopRemotePaste": "Paste pairing code",
   "desktopRemoteConnect": "Connect",
@@ -32,5 +32,9 @@
   "desktopRemoteCredits": "This account has insufficient credits.",
   "desktopRemoteError": "The desktop service is temporarily unavailable. Try again shortly.",
   "desktopRemoteFullMessage": "View full message",
-  "desktopRemoteMore": "Load more"
+  "desktopRemoteMore": "Load more",
+  "desktopRemoteRecentChats": "Desktop chat history",
+  "desktopRemoteEmptyRecent": "There are no desktop chats to continue.",
+  "desktopRemoteDefaultPermissions": "Use default permissions",
+  "desktopRemoteDefaultPermissionsDescription": "This chat uses full access. Continue from your phone by switching this chat to default permissions on your computer."
 }

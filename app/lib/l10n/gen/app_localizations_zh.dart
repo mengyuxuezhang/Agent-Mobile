@@ -5816,7 +5816,7 @@ class L10nZh extends L10n {
   String get desktopRemoteLogin => '登录账号';
 
   @override
-  String get desktopRemotePairInstructions => '在电脑的系统托盘打开「手机远程协作」，选择工作区后复制配对码。';
+  String get desktopRemotePairInstructions => '在电脑的系统托盘打开「手机远程协作」，确认连接后复制配对码。';
 
   @override
   String get desktopRemoteCode => '配对码';
@@ -5901,6 +5901,18 @@ class L10nZh extends L10n {
 
   @override
   String get desktopRemoteMore => '继续加载';
+
+  @override
+  String get desktopRemoteRecentChats => '电脑历史会话';
+
+  @override
+  String get desktopRemoteEmptyRecent => '电脑上还没有可继续的会话。';
+
+  @override
+  String get desktopRemoteDefaultPermissions => '切换到默认权限';
+
+  @override
+  String get desktopRemoteDefaultPermissionsDescription => '这个会话在电脑上使用全开权限。确认后会同步切换为默认权限，再从手机继续。';
 
   @override
   String get automaticDiagnosticsRecover => '恢复本地记录';

@@ -20,6 +20,9 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
   final _code = TextEditingController();
   List<RemoteJson> _workspaces = [];
   List<RemoteJson> _sessions = [];
+  List<RemoteJson> _recent = [];
+  String? _recentCursor;
+  bool _overview = false;
   RemoteJson? _workspace;
   bool _busy = false;
   String? _error;
@@ -57,7 +60,28 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
 
   Future<void> _loadWorkspaces() async {
     final result = await _client.request('workspaces/list');
-    if (mounted) setState(() => _workspaces = _items(result['workspaces']));
+    if (!mounted) return;
+    setState(() {
+      _workspaces = _items(result['workspaces']);
+      _overview = result['overview'] == true;
+      _recent = [];
+      _recentCursor = null;
+    });
+    if (_overview) await _loadRecent();
+  }
+
+  Future<void> _loadRecent([String? cursor]) async {
+    final result = await _client.request('sessions/recent', {'before': ?cursor});
+    if (!mounted) return;
+    setState(() {
+      final rows = _items(result['sessions']);
+      _recent = cursor == null
+          ? rows
+          : {
+              for (final item in [..._recent, ...rows]) item['id']: item,
+            }.values.toList();
+      _recentCursor = result['before'] as String?;
+    });
   }
 
   Future<void> _loadSessions(RemoteJson workspace) async {
@@ -70,21 +94,26 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
     }
   }
 
-  Future<void> _open(String sessionId, String title) async {
-    final workspace = _workspace!;
-    final result = await _client.request('chat/open', {'workspaceId': workspace['id'], 'sessionId': sessionId});
+  Future<void> _open(String workspaceId, String sessionId, String title) async {
+    final result = await _client.request('chat/open', {'workspaceId': workspaceId, 'sessionId': sessionId});
     if (!mounted) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (_) => _DesktopChatScreen(
-          workspaceId: workspace['id'] as String,
+          workspaceId: workspaceId,
           sessionId: sessionId,
           title: title,
           initial: result['chat'] as RemoteJson,
         ),
       ),
     );
-    if (mounted && _client.connected) await _loadSessions(workspace);
+    if (!mounted || !_client.connected) return;
+    final workspace = _workspace;
+    if (workspace == null) {
+      await _loadWorkspaces();
+    } else {
+      await _loadSessions(workspace);
+    }
   }
 
   @override
@@ -117,6 +146,9 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
                           _workspace = null;
                           _workspaces = [];
                           _sessions = [];
+                          _recent = [];
+                          _recentCursor = null;
+                          _overview = false;
                         });
                       }
                     }),
@@ -171,6 +203,9 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
                           _workspace = null;
                           _workspaces = [];
                           _sessions = [];
+                          _recent = [];
+                          _recentCursor = null;
+                          _overview = false;
                         });
                         await _loadWorkspaces();
                       }),
@@ -178,15 +213,59 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
                 label: Text(l10n.desktopRemoteConnect),
               ),
             ] else if (workspace == null) ...[
-              _Feedback(text: l10n.desktopRemoteWorkspaces),
-              if (_workspaces.isEmpty && !_busy) _Feedback(text: l10n.desktopRemoteEmptyWorkspaces),
-              for (final item in _workspaces)
-                ListTile(
-                  leading: const Icon(Icons.folder_outlined),
-                  title: Text(item['name'] as String),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: _busy ? null : () => _run(() => _loadSessions(item)),
+              if (_overview) ...[
+                FilledButton.icon(
+                  onPressed: _busy
+                      ? null
+                      : () => _run(() async {
+                          final result = await _client.request('sessions/create');
+                          if (mounted) {
+                            await _open(
+                              result['workspaceId'] as String,
+                              result['sessionId'] as String,
+                              l10n.desktopRemoteNewChat,
+                            );
+                          }
+                        }),
+                  icon: const Icon(Icons.add),
+                  label: Text(l10n.desktopRemoteNewChat),
                 ),
+              ],
+              ExpansionTile(
+                initiallyExpanded: !_overview,
+                title: Text(l10n.desktopRemoteWorkspaces),
+                children: [
+                  if (_workspaces.isEmpty && !_busy) _Feedback(text: l10n.desktopRemoteEmptyWorkspaces),
+                  for (final item in _workspaces)
+                    ListTile(
+                      leading: const Icon(Icons.folder_outlined),
+                      title: Text(item['name'] as String),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: _busy ? null : () => _run(() => _loadSessions(item)),
+                    ),
+                ],
+              ),
+              if (_overview) ...[
+                _Feedback(text: l10n.desktopRemoteRecentChats),
+                if (_recent.isEmpty && !_busy) _Feedback(text: l10n.desktopRemoteEmptyRecent),
+                for (final item in _recent)
+                  ListTile(
+                    leading: const Icon(Icons.chat_bubble_outline),
+                    title: Text(item['title'] as String),
+                    subtitle: Text(item['workspaceName'] as String),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: _busy
+                        ? null
+                        : () => _run(
+                            () => _open(item['workspaceId'] as String, item['id'] as String, item['title'] as String),
+                          ),
+                  ),
+                if (_recentCursor != null)
+                  TextButton(
+                    onPressed: _busy ? null : () => _run(() => _loadRecent(_recentCursor)),
+                    child: Text(l10n.desktopRemoteMore),
+                  ),
+              ],
             ] else ...[
               TextButton.icon(
                 onPressed: _busy ? null : () => setState(() => _workspace = null),
@@ -198,7 +277,13 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
                     ? null
                     : () => _run(() async {
                         final result = await _client.request('sessions/create', {'workspaceId': workspace['id']});
-                        if (mounted) await _open(result['sessionId'] as String, l10n.desktopRemoteNewChat);
+                        if (mounted) {
+                          await _open(
+                            workspace['id'] as String,
+                            result['sessionId'] as String,
+                            l10n.desktopRemoteNewChat,
+                          );
+                        }
                       }),
                 icon: const Icon(Icons.add),
                 label: Text(l10n.desktopRemoteNewChat),
@@ -209,7 +294,10 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
                   leading: const Icon(Icons.chat_bubble_outline),
                   title: Text(item['title'] as String),
                   trailing: const Icon(Icons.chevron_right),
-                  onTap: _busy ? null : () => _run(() => _open(item['id'] as String, item['title'] as String)),
+                  onTap: _busy
+                      ? null
+                      : () =>
+                            _run(() => _open(workspace['id'] as String, item['id'] as String, item['title'] as String)),
                 ),
             ],
           ],
@@ -353,6 +441,28 @@ class _DesktopChatScreenState extends ConsumerState<_DesktopChatScreen> with Wid
     }
   }
 
+  Future<void> _useDefaultPermissions() async {
+    final l10n = context.l10n;
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.desktopRemoteDefaultPermissions),
+        content: Text(l10n.desktopRemoteDefaultPermissionsDescription),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.desktopRemoteDefaultPermissions),
+          ),
+        ],
+      ),
+    );
+    if (mounted && accepted == true) await _call('chat/use-default-permissions');
+  }
+
   void _openMessage(String id) {
     final client = _client;
     unawaited(
@@ -376,6 +486,7 @@ class _DesktopChatScreenState extends ConsumerState<_DesktopChatScreen> with Wid
     }
     final cursor = _paged ? _before : _chat['before'] as String?;
     final error = _actionError ?? _readError ?? _chat['error'] as String?;
+    final needsDefaultPermissions = _chat['canUseDefaultPermissions'] == true;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -394,6 +505,11 @@ class _DesktopChatScreenState extends ConsumerState<_DesktopChatScreen> with Wid
             : Column(
                 children: [
                   if (_running) const LinearProgressIndicator(),
+                  if (needsDefaultPermissions)
+                    TextButton(
+                      onPressed: _running || _sending ? null : _useDefaultPermissions,
+                      child: Text(l10n.desktopRemoteDefaultPermissions),
+                    ),
                   if (error != null) _Feedback(text: _message(context, error), error: true),
                   Expanded(
                     child: ListView(
@@ -479,7 +595,7 @@ class _DesktopChatScreenState extends ConsumerState<_DesktopChatScreen> with Wid
                         ),
                         IconButton.filled(
                           tooltip: l10n.desktopRemoteSend,
-                          onPressed: _running || _sending
+                          onPressed: _running || _sending || needsDefaultPermissions
                               ? null
                               : () {
                                   final text = _input.text.trim();

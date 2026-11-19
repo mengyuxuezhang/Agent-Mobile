@@ -4,7 +4,7 @@
   "desktopRemoteDisconnect": "断开连接",
   "desktopRemoteSignIn": "请先登录与电脑相同的品牌账号。",
   "desktopRemoteLogin": "登录账号",
-  "desktopRemotePairInstructions": "在电脑的系统托盘打开「手机远程协作」，选择工作区后复制配对码。",
+  "desktopRemotePairInstructions": "在电脑的系统托盘打开「手机远程协作」，确认连接后复制配对码。",
   "desktopRemoteCode": "配对码",
   "desktopRemotePaste": "粘贴配对码",
   "desktopRemoteConnect": "连接电脑",
@@ -32,5 +32,9 @@
   "desktopRemoteCredits": "账号积分不足。",
   "desktopRemoteError": "暂时无法连接桌面服务，请稍后再试。",
   "desktopRemoteFullMessage": "查看全文",
-  "desktopRemoteMore": "继续加载"
+  "desktopRemoteMore": "继续加载",
+  "desktopRemoteRecentChats": "电脑历史会话",
+  "desktopRemoteEmptyRecent": "电脑上还没有可继续的会话。",
+  "desktopRemoteDefaultPermissions": "切换到默认权限",
+  "desktopRemoteDefaultPermissionsDescription": "这个会话在电脑上使用全开权限。确认后会同步切换为默认权限，再从手机继续。"
 }
