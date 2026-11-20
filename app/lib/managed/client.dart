@@ -86,6 +86,7 @@ class ManagedClient {
     if (token != null) {
       request.headers['authorization'] = 'Bearer $token';
       request.headers['x-agent-project-id'] = ManagedBrand.projectId;
+      request.headers['x-agent-client-platform'] = 'android';
     }
     if (body != null) {
       request.headers['content-type'] = 'application/json';

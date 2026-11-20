@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:dsh_client/dsh_client.dart';
 import 'package:dsh_app/managed/client.dart';
 import 'package:dsh_app/managed/model_sync.dart';
+import 'package:dsh_app/managed/model_gateway.dart';
 import 'package:dsh_app/managed/session.dart';
 import 'package:dsh_app/state/models_state.dart';
 import 'package:dsh_app/state/providers_state.dart';
@@ -68,6 +71,88 @@ class _EngineState extends Notifier<ProviderBackend?> {
 final _engineState = NotifierProvider<_EngineState, ProviderBackend?>(_EngineState.new);
 
 void main() {
+  test('official profiles map vision and configured thinking levels from the catalog', () {
+    final models = managedModels({
+      'models': [
+        {
+          'id': 'vision',
+          'modelType': 'text',
+          'capabilities': ['text', 'Image Understanding', 'tool_calls'],
+          'reasoning': {
+            'enabled': true,
+            'efforts': ['none', 'low', 'high', 'unknown'],
+          },
+        },
+        {
+          'id': 'text',
+          'modelType': 'text',
+          'capabilities': ['vision'],
+          'supportsVision': false,
+        },
+        {
+          'id': 'generator',
+          'modelType': 'image',
+          'capabilities': ['image_generation'],
+        },
+      ],
+    });
+    expect(models.map((model) => model.id), ['vision', 'text']);
+    expect(models.first.toJson()['input'], ['text', 'image']);
+    expect(models.first.reasoningEfforts, {'off': 'none', 'low': 'low', 'high': 'high'});
+    expect(models.last.acceptsImages(), isFalse);
+    expect(models.last.thinks, isFalse);
+  });
+
+  test('mobile gateway preserves image and reasoning and omits tools only for models without tools', () async {
+    final requests = <Map<String, dynamic>>[];
+    final gateway = ManagedModelGateway(
+      MockClient((request) async {
+        expect(request.headers['x-agent-client-platform'], 'android');
+        requests.add(jsonDecode(request.body) as Map<String, dynamic>);
+        return http.Response('{}', 200, headers: {'content-type': 'application/json'});
+      }),
+      endpoint: Uri.parse('https://fixture.test/api/client/model/v1/chat/completions'),
+      projectId: 'project',
+      token: 'fixture',
+      allowedModels: {'vision-tool', 'vision-only'},
+      modelsWithoutTools: {'vision-only'},
+    );
+    addTearDown(gateway.close);
+    final url = await gateway.start();
+    final messages = [
+      {
+        'role': 'user',
+        'content': [
+          {
+            'type': 'image_url',
+            'image_url': {'url': 'data:image/png;base64,AA=='},
+          },
+        ],
+      },
+    ];
+    for (final model in ['vision-tool', 'vision-only']) {
+      final reply = await http.post(
+        url.replace(path: '/v1/chat/completions'),
+        headers: {'authorization': 'Bearer ${gateway.key}', 'content-type': 'application/json'},
+        body: jsonEncode({
+          'model': model,
+          'messages': messages,
+          'reasoning_effort': 'low',
+          'tools': [
+            {'type': 'function'},
+          ],
+          'tool_choice': 'auto',
+        }),
+      );
+      expect(reply.statusCode, 200);
+    }
+    expect(requests.first['tools'], isNotNull);
+    expect(requests.last.containsKey('tools'), isFalse);
+    expect(requests.last.containsKey('tool_choice'), isFalse);
+    expect(requests.last['messages'], messages);
+    expect(requests.last['reasoning_effort'], 'low');
+  });
+
   test('the project picker only exposes official models', () {
     final catalog = projectModelCatalog(
       ModelCatalog.fromJson({

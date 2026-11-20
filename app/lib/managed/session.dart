@@ -63,7 +63,8 @@ class ManagedSession {
     bool Function() current,
   ) async {
     if (token != accountToken || !current() || !engine.isLocal) return;
-    final models = managedModels(catalog);
+    final entries = _managedModelEntries(catalog);
+    final models = entries.map((entry) => entry.spec).toList(growable: false);
     final settings = await engine.read();
     if (token != accountToken || !current()) return;
     if (settings == null) throw StateError('DSH model adapter is unavailable');
@@ -82,6 +83,7 @@ class ManagedSession {
       projectId: ManagedBrand.projectId,
       token: accountToken,
       allowedModels: models.map((model) => model.id).toSet(),
+      modelsWithoutTools: entries.where((entry) => entry.withoutTools).map((entry) => entry.spec.id).toSet(),
     );
     try {
       final url = await gateway.start();
@@ -156,22 +158,55 @@ class ManagedSession {
   }
 }
 
-List<ProviderModelSpec> managedModels(JsonObject catalog) {
+List<ProviderModelSpec> managedModels(JsonObject catalog) =>
+    _managedModelEntries(catalog).map((entry) => entry.spec).toList(growable: false);
+
+typedef _ManagedModelEntry = ({ProviderModelSpec spec, bool withoutTools});
+
+List<_ManagedModelEntry> _managedModelEntries(JsonObject catalog) {
   final raw = catalog['models'];
   if (raw is! List) return const [];
-  final unique = <String, ProviderModelSpec>{};
+  final unique = <String, _ManagedModelEntry>{};
   for (final model in raw.whereType<JsonObject>()) {
     final id = model['id'];
     if (id is! String || id.isEmpty || model['modelType'] != 'text' || model['configured'] == false) continue;
     final rawContext = int.tryParse('${model['contextWindow']}');
-    final vision = model['supportsVision'] == true;
+    final capabilities = (model['capabilities'] is List ? model['capabilities'] as List : const [])
+        .whereType<String>()
+        .map((tag) => tag.trim().toLowerCase().replaceAll(RegExp(r'[-\s]+'), '_'))
+        .where((tag) => tag.isNotEmpty)
+        .toSet();
+    final visionFlag = model['supportsVision'];
+    final vision = visionFlag is bool
+        ? visionFlag
+        : capabilities.any(const {'vision', 'image_understanding', 'image_input', 'multimodal'}.contains);
+    final tools = model['supportsTools'];
+    final supportsTools = tools is bool
+        ? tools
+        : capabilities.isEmpty
+        ? null
+        : capabilities.any(const {'tool_calls', 'tools', 'tool', 'function_calling'}.contains);
+    final reasoning = model['reasoning'];
+    final efforts = reasoning is Map && reasoning['enabled'] == true && model['supportsReasoning'] != false
+        ? reasoning['efforts']
+        : null;
+    final levels = <String, String>{
+      if (efforts is List)
+        for (final effort in efforts.whereType<String>())
+          if (effort == 'none' || (piAiThinkingLevels.contains(effort) && effort != 'off' && effort != 'max'))
+            (effort == 'none' ? 'off' : effort): effort,
+    };
     unique.putIfAbsent(
       id,
-      () => ProviderModelSpec(
-        id: id,
-        name: model['name'] is String ? model['name'] as String : null,
-        contextWindow: rawContext != null && rawContext > 0 ? rawContext : null,
-        input: vision ? const ['text', 'image'] : const ['text'],
+      () => (
+        withoutTools: supportsTools == false,
+        spec: ProviderModelSpec(
+          id: id,
+          name: model['name'] is String ? model['name'] as String : null,
+          contextWindow: rawContext != null && rawContext > 0 ? rawContext : null,
+          input: vision ? const ['text', 'image'] : const ['text'],
+          extra: {'reasoningEfforts': levels.keys.any((level) => level != 'off') ? levels : false},
+        ),
       ),
     );
   }

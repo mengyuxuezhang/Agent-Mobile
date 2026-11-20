@@ -18,12 +18,14 @@ class ManagedModelGateway {
     required this.projectId,
     required this.token,
     required this.allowedModels,
+    this.modelsWithoutTools = const {},
   });
 
   final Uri endpoint;
   final String projectId;
   final String token;
   final Set<String> allowedModels;
+  final Set<String> modelsWithoutTools;
   final http.Client _transport;
   final key = managedRandomId();
   HttpServer? _server;
@@ -73,6 +75,18 @@ class ManagedModelGateway {
         return await _error(output, 403, 'Model is unavailable for this account');
       }
 
+      final outbound = modelsWithoutTools.contains(json['model'])
+          ? utf8.encode(
+              jsonEncode(
+                json
+                  ..remove('tools')
+                  ..remove('tool_choice')
+                  ..remove('parallel_tool_calls')
+                  ..remove('functions')
+                  ..remove('function_call'),
+              ),
+            )
+          : body;
       final upstream = http.AbortableRequest('POST', endpoint, abortTrigger: abort.future)
         ..followRedirects = false
         ..headers.addAll({
@@ -80,9 +94,10 @@ class ManagedModelGateway {
           'content-type': 'application/json',
           'accept': 'text/event-stream, application/json',
           'x-agent-project-id': projectId,
+          'x-agent-client-platform': 'android',
           'x-request-id': managedRandomId(),
         })
-        ..bodyBytes = body;
+        ..bodyBytes = outbound;
       final response = await _transport.send(upstream).timeout(const Duration(minutes: 3));
       if (response.statusCode >= 300 && response.statusCode < 400) {
         return await _error(output, 502, 'Unexpected model service redirect');
