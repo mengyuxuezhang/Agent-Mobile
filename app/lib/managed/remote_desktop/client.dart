@@ -15,7 +15,13 @@ typedef RemoteJson = Map<String, dynamic>;
 final desktopRemoteProvider = Provider<DesktopRemoteClient>((ref) {
   final session = ref.watch(managedSessionProvider);
   final transport = http.Client();
-  final client = DesktopRemoteClient(transport, ManagedBrand.api, ManagedBrand.projectId, () => session.token);
+  final client = DesktopRemoteClient(
+    transport,
+    ManagedBrand.api,
+    ManagedBrand.projectId,
+    () => session.token,
+    onUnauthorized: session.rejectToken,
+  );
   ref.onDispose(() {
     transport.close();
     unawaited(client.linkChanges.close());
@@ -29,9 +35,15 @@ class DesktopRemoteException implements Exception {
 }
 
 class DesktopRemoteClient {
-  DesktopRemoteClient(this._http, Uri api, this._project, this._token, {Duration Function()? monotonicTime})
-    : _root = api.resolve('client/remote-desktop/v1/'),
-      _now = monotonicTime ?? _monotonicTime();
+  DesktopRemoteClient(
+    this._http,
+    Uri api,
+    this._project,
+    this._token, {
+    Duration Function()? monotonicTime,
+    this.onUnauthorized,
+  }) : _root = api.resolve('client/remote-desktop/v1/'),
+       _now = monotonicTime ?? _monotonicTime();
 
   static Duration Function() _monotonicTime() {
     final clock = Stopwatch()..start();
@@ -42,6 +54,7 @@ class DesktopRemoteClient {
   final Uri _root;
   final String _project;
   final String? Function() _token;
+  final Future<void> Function(String token)? onUnauthorized;
   final _cipher = AesGcm.with256bits();
   final Duration Function() _now;
   final _submissions = Queue<Duration>();
@@ -192,7 +205,10 @@ class DesktopRemoteClient {
       await _http.send(request),
     ))().timeout(const Duration(seconds: 7));
     if (_token() != token) throw const DesktopRemoteException('ACCESS_REVOKED');
-    if (response.statusCode == 401) throw const DesktopRemoteException('SIGN_IN');
+    if (response.statusCode == 401) {
+      await onUnauthorized?.call(token);
+      throw const DesktopRemoteException('SIGN_IN');
+    }
     if (response.statusCode == 429) throw const DesktopRemoteException('RELAY_BUSY');
     final json = jsonDecode(response.body);
     if (json is! RemoteJson) throw const DesktopRemoteException('INVALID_RESPONSE');

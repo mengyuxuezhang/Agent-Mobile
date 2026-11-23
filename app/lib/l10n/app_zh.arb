@@ -6105,6 +6105,8 @@
     }
   },
   "managedAccountSignInHint": "使用与桌面端相同的账号登录",
+  "managedSessionExpired": "登录已失效，请重新登录。",
+  "managedRestoreUnavailable": "暂时无法验证已保存的登录状态。",
   "managedAccountDetails": "会员、积分与模型",
   "managedSignIn": "登录",
   "managedUsername": "账号",

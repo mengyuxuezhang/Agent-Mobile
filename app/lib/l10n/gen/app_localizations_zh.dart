@@ -10370,6 +10370,12 @@ class L10nZh extends L10n {
   String get managedAccountSignInHint => '使用与桌面端相同的账号登录';
 
   @override
+  String get managedSessionExpired => '登录已失效，请重新登录。';
+
+  @override
+  String get managedRestoreUnavailable => '暂时无法验证已保存的登录状态。';
+
+  @override
   String get managedAccountDetails => '会员、积分与模型';
 
   @override

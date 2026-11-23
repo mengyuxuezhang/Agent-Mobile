@@ -39,7 +39,9 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
   @override
   void initState() {
     super.initState();
-    _run(_token == null ? _loadCaptcha : _refresh);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _run(_openAccount);
+    });
   }
 
   Future<void> _run(Future<void> Function() action) async {
@@ -51,18 +53,11 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
     try {
       await action();
     } catch (error) {
-      if (error is ManagedApiError && error.status == 401) {
-        try {
-          await _session.signOut();
-        } catch (_) {
-          // The account lease was closed before removing the engine entry.
-        }
-        if (mounted) setState(() => _snapshot = null);
-      }
       if (!mounted) return;
       setState(() {
         final l10n = context.l10n;
         _error = switch (error) {
+          ManagedApiError(status: 401) when _token == null => l10n.managedSessionExpired,
           ManagedApiError(status: 429) => l10n.managedTooManyRequests,
           ManagedApiError(message: '账号或密码不正确') => l10n.managedLoginInvalidCredentials,
           ManagedApiError(message: '验证码不正确或已失效，请刷新后重试') => l10n.managedLoginInvalidCaptcha,
@@ -72,6 +67,12 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _openAccount() async {
+    await _session.restore();
+    if (!mounted || _session.restoreState.value != ManagedRestoreState.finished) return;
+    await (_token == null ? _loadCaptcha() : _refresh());
   }
 
   Future<void> _loadCaptcha() async {
@@ -140,7 +141,9 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
     TextInput.finishAutofillContext();
     _password.clear();
     _answer.clear();
-    setState(() => _session.token = token);
+    setState(() => _snapshot = null);
+    await _session.signIn(token);
+    if (!mounted) return;
     if (widget.finishOnSignIn) {
       Navigator.of(context).pop(true);
       return;
@@ -161,13 +164,8 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
   }
 
   Future<void> _signOut() async {
-    try {
-      await _session.signOut();
-    } finally {
-      if (mounted) {
-        setState(() => _snapshot = null);
-      }
-    }
+    await _session.signOut();
+    if (mounted) setState(() => _snapshot = null);
     if (mounted) await _loadCaptcha();
   }
 
@@ -182,6 +180,26 @@ class _ManagedAccountPageState extends ConsumerState<ManagedAccountPage> {
   @override
   Widget build(BuildContext context) {
     final l10n = context.l10n;
+    ref.listen(managedRestoreStateProvider, (previous, next) {
+      if (previous != ManagedRestoreState.finished && next == ManagedRestoreState.finished) _run(_openAccount);
+    });
+    final restoration = ref.watch(managedRestoreStateProvider);
+    if (restoration != ManagedRestoreState.finished) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.managedAccountTitle(AppInfo.name))),
+        body: Center(
+          child: restoration == ManagedRestoreState.checking
+              ? const CircularProgressIndicator()
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(l10n.managedRestoreUnavailable),
+                    TextButton(onPressed: _busy ? null : () => _run(_openAccount), child: Text(l10n.commonRetry)),
+                  ],
+                ),
+        ),
+      );
+    }
     if (!ref.watch(managedSignedInProvider)) return _loginForm(context);
     final snapshot = _snapshot;
     final user = snapshot?.first['user'];

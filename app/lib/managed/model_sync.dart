@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../state/models_state.dart';
 import '../state/providers_state.dart';
-import 'client.dart';
+import 'client.dart' show JsonObject;
 import 'session.dart';
 
 final managedModelCatalogProvider = FutureProvider<JsonObject?>((ref) async {
@@ -10,14 +10,7 @@ final managedModelCatalogProvider = FutureProvider<JsonObject?>((ref) async {
   final session = ref.watch(managedSessionProvider);
   final token = session.token;
   if (token == null) return null;
-  try {
-    return await session.client.models(token);
-  } on ManagedApiError catch (error) {
-    if (error.status == 401 && ref.mounted && session.token == token) {
-      await session.signOut();
-    }
-    rethrow;
-  }
+  return session.client.models(token);
 });
 
 /// Kept alive by the app so login and a later local-engine reconnect both bind

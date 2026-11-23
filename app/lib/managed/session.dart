@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 
 import '../l10n/l10n.dart';
+import '../secrets/secure_storage.dart';
 import '../state/app_info.dart';
 import '../state/provider_backend.dart';
 import 'brand.dart';
@@ -13,7 +15,9 @@ import 'client.dart';
 import 'model_gateway.dart';
 
 final managedSessionProvider = Provider<ManagedSession>((ref) {
-  final session = ManagedSession();
+  final session = ManagedSession(
+    storageKey: ManagedBrand.isConfigured ? 'managed-session:${ManagedBrand.api}:${ManagedBrand.projectId}' : null,
+  );
   ref.onDispose(session.dispose);
   return session;
 });
@@ -26,9 +30,98 @@ final managedSignedInProvider = Provider<bool>((ref) {
   return session.signedIn.value;
 });
 
+enum ManagedRestoreState { checking, unavailable, finished }
+
+final managedRestoreStateProvider = Provider<ManagedRestoreState>((ref) {
+  final restoreState = ref.watch(managedSessionProvider).restoreState;
+  final listener = ref.invalidateSelf;
+  restoreState.addListener(listener);
+  ref.onDispose(() => restoreState.removeListener(listener));
+  return restoreState.value;
+});
+
 class ManagedSession {
-  final _transport = http.Client();
-  late final client = ManagedClient(_transport, appVersion: AppInfo.version);
+  ManagedSession({
+    String? storageKey,
+    this._storage = const AppSecureStorage(
+      FlutterSecureStorage(aOptions: AndroidOptions(storageNamespace: 'managed_session')),
+    ),
+    http.Client? transport,
+    this._api,
+  }) : _storageKey = storageKey,
+       _transport = transport ?? http.Client(),
+       restoreState = ValueNotifier(storageKey == null ? ManagedRestoreState.finished : ManagedRestoreState.checking);
+
+  final String? _storageKey;
+  final AppSecureStorage _storage;
+  final http.Client _transport;
+  final Uri? _api;
+  late final client = ManagedClient(_transport, appVersion: AppInfo.version, api: _api, onUnauthorized: rejectToken);
+  final ValueNotifier<ManagedRestoreState> restoreState;
+  Future<void>? _restoring;
+  Future<void> _credentialUpdates = Future.value();
+  int _revision = 0;
+  bool _disposed = false;
+
+  Future<void> _updateCredentials(Future<void> Function() update) {
+    final result = _credentialUpdates.then((_) => update());
+    _credentialUpdates = result.then<void>((_) {}, onError: (Object _, StackTrace _) {});
+    return result;
+  }
+
+  Future<void> restore() {
+    if (_disposed || restoreState.value == ManagedRestoreState.finished) return Future.value();
+    return _restoring ??= _restore().whenComplete(() => _restoring = null);
+  }
+
+  Future<void> _restore() async {
+    final revision = _revision;
+    final key = _storageKey!;
+    bool current() => !_disposed && revision == _revision;
+    restoreState.value = ManagedRestoreState.checking;
+    try {
+      final saved = await _storage.read(key: key);
+      if (!current()) return;
+      if (saved != null) {
+        try {
+          final account = await client.account(saved);
+          if (account['user'] case {'id': final String id} when id.isNotEmpty) {
+            if (current()) token = saved;
+          } else {
+            throw const FormatException('Invalid account response');
+          }
+        } on ManagedApiError catch (error) {
+          if (error.status != 401) rethrow;
+          await _updateCredentials(() async {
+            if (current()) await _storage.delete(key: key);
+          });
+        }
+      }
+      if (current()) restoreState.value = ManagedRestoreState.finished;
+    } catch (_) {
+      if (current()) restoreState.value = ManagedRestoreState.unavailable;
+    }
+  }
+
+  Future<void> signIn(String value) => _updateCredentials(() async {
+    if (_disposed) return;
+    if (_storageKey case final key?) await _storage.write(key: key, value: value);
+    if (_disposed) return;
+    _revision++;
+    token = value;
+    restoreState.value = ManagedRestoreState.finished;
+  });
+
+  /// A delayed reply from one login must never sign out a replacement login.
+  Future<void> rejectToken(String value) async {
+    try {
+      await _signOut(expected: value);
+    } catch (_) {
+      // The API no longer accepts this token. Recheck the stored copy at launch
+      // if deleting it failed, and let the caller report the original 401.
+    }
+  }
+
   static const modelRoute = 'yushuhub-managed';
   static final _keyRef = deriveProviderKeyRef(modelRoute);
   String? _token;
@@ -83,6 +176,7 @@ class ManagedSession {
       projectId: ManagedBrand.projectId,
       token: accountToken,
       allowedModels: models.map((model) => model.id).toSet(),
+      onSessionRejected: () => rejectToken(accountToken),
       modelsWithoutTools: entries.where((entry) => entry.withoutTools).map((entry) => entry.spec.id).toSet(),
     );
     try {
@@ -128,8 +222,19 @@ class ManagedSession {
     await previous?.close();
   }
 
-  Future<void> signOut() async {
+  Future<void> signOut() => _signOut();
+
+  Future<void> _signOut({String? expected}) => _updateCredentials(() async {
+    if (_disposed || (expected != null && token != expected)) return;
+    try {
+      if (_storageKey case final key?) await _storage.delete(key: key);
+    } catch (_) {
+      if (expected == null) rethrow;
+    }
+    if (_disposed) return;
+    _revision++;
     token = null;
+    restoreState.value = ManagedRestoreState.finished;
     final gateway = _gateway;
     _gateway = null;
     final closing = gateway?.close();
@@ -146,10 +251,12 @@ class ManagedSession {
         await engine.remove(modelRoute).timeout(const Duration(seconds: 3));
       }
     });
-  }
+  });
 
   void dispose() {
+    _disposed = true;
     _token = null;
+    restoreState.dispose();
     signedIn.dispose();
     _transport.close();
     final gateway = _gateway;

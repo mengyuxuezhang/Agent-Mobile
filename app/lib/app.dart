@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'managed/brand.dart';
 import 'managed/model_sync.dart';
+import 'managed/session.dart';
 
 import 'companion/companion_initiative_owner.dart' show companionInitiativeProvider;
 import 'l10n/l10n.dart';
@@ -84,12 +85,20 @@ class _DshAppState extends ConsumerState<DshApp> with WidgetsBindingObserver {
     // while it is actually drawing (see RefreshRateService).
     RefreshRateService.instance.start();
     WidgetsBinding.instance.addObserver(this);
+    if (ManagedBrand.isConfigured) unawaited(ref.read(managedSessionProvider).restore());
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && ManagedBrand.isConfigured) {
+      unawaited(ref.read(managedSessionProvider).restore());
+    }
   }
 
   /// 跟随系统: the system language changed while the app was open.

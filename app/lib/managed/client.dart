@@ -13,9 +13,11 @@ class ManagedApiError implements Exception {
 }
 
 class ManagedClient {
-  ManagedClient(this._http, {required this.appVersion});
+  ManagedClient(this._http, {required this.appVersion, this._api, this.onUnauthorized});
   final String appVersion;
   final http.Client _http;
+  final Uri? _api;
+  final Future<void> Function(String token)? onUnauthorized;
 
   Future<JsonObject> captcha() => _request('client/auth/login-captcha');
 
@@ -80,7 +82,7 @@ class ManagedClient {
   Future<JsonObject> ledger(String token) => _request('client/credits/ledger?page=1&pageSize=5', token: token);
 
   Future<JsonObject> _request(String route, {String? token, JsonObject? body}) async {
-    final request = http.Request(body == null ? 'GET' : 'POST', ManagedBrand.api.resolve(route))
+    final request = http.Request(body == null ? 'GET' : 'POST', (_api ?? ManagedBrand.api).resolve(route))
       ..followRedirects = false
       ..headers['accept'] = 'application/json';
     if (token != null) {
@@ -103,6 +105,7 @@ class ManagedClient {
           // Upstream proxies can return a non-JSON error document.
         }
       }
+      if (token != null && response.statusCode == 401) await onUnauthorized?.call(token);
       throw ManagedApiError(response.statusCode, message);
     }
     final envelope = jsonDecode(utf8.decode(response.bodyBytes));

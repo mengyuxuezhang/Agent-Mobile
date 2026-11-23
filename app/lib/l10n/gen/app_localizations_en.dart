@@ -10934,6 +10934,12 @@ class L10nEn extends L10n {
   String get managedAccountSignInHint => 'Use the same account as the desktop app';
 
   @override
+  String get managedSessionExpired => 'Your session has expired. Please sign in again.';
+
+  @override
+  String get managedRestoreUnavailable => 'Could not verify your saved sign-in.';
+
+  @override
   String get managedAccountDetails => 'Membership, credits and models';
 
   @override

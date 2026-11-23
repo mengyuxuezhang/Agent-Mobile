@@ -19,6 +19,7 @@ class ManagedModelGateway {
     required this.token,
     required this.allowedModels,
     this.modelsWithoutTools = const {},
+    this.onSessionRejected,
   });
 
   final Uri endpoint;
@@ -26,6 +27,7 @@ class ManagedModelGateway {
   final String token;
   final Set<String> allowedModels;
   final Set<String> modelsWithoutTools;
+  final Future<void> Function()? onSessionRejected;
   final http.Client _transport;
   final key = managedRandomId();
   HttpServer? _server;
@@ -121,6 +123,9 @@ class ManagedModelGateway {
       started = true;
       await output.addStream(response.stream.timeout(const Duration(minutes: 3)));
       await output.close();
+      if (response.statusCode == 401 && response.headers['x-agent-error-code'] == 'ADMIN_AUTH_REQUIRED') {
+        unawaited(onSessionRejected?.call());
+      }
     } on FormatException {
       if (!started) await _error(output, 400, 'Invalid request body');
       if (started) await _disconnect(output);

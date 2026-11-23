@@ -19274,6 +19274,18 @@ abstract class L10n {
   /// **'使用与桌面端相同的账号登录'**
   String get managedAccountSignInHint;
 
+  /// No description provided for @managedSessionExpired.
+  ///
+  /// In zh, this message translates to:
+  /// **'登录已失效，请重新登录。'**
+  String get managedSessionExpired;
+
+  /// No description provided for @managedRestoreUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'暂时无法验证已保存的登录状态。'**
+  String get managedRestoreUnavailable;
+
   /// No description provided for @managedAccountDetails.
   ///
   /// In zh, this message translates to:

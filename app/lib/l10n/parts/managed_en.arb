@@ -1,6 +1,8 @@
 {
   "managedAccountTitle": "{brand} account",
   "managedAccountSignInHint": "Use the same account as the desktop app",
+  "managedSessionExpired": "Your session has expired. Please sign in again.",
+  "managedRestoreUnavailable": "Could not verify your saved sign-in.",
   "managedAccountDetails": "Membership, credits and models",
   "managedSignIn": "Sign in",
   "@managedAccountTitle": {
