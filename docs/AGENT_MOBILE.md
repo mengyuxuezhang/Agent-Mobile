@@ -4,6 +4,8 @@ Agent Mobile 是 [dsh-Go](https://github.com/ccch1mneyyy/dsh-Go) 的 Android 衍
 
 初始基线记录在 [UPSTREAM_REV](../UPSTREAM_REV)。原始上游历史包含另行授权的素材。升级时先在独立检出获取目标版本，再运行 `python tooling/import-android-upstream.py <archive.zip> <目标目录>` 生成筛选后的源码基线，比较两个筛选版本的差异，并将差异应用到产品分支。上游原始历史与排除素材保留在本地参考区。合入后更新基线提交并检查资源及实际 APK。二开业务代码位于 `app/lib/managed/`。宿主层只负责注册入口与平台配置。
 
+Android 从上游 v1.3.0 选择性移植了本机会话、引擎升级恢复、DNS、历史图片快照、消息选字引用、模型名称布局和长图分享的改动。对比全量上游差异时继续使用 `UPSTREAM_REV` 的完整基线。构建 x64 或 arm64 包前要从当前代码重建该 ABI 的运行时，才能包含引擎和 DNS 更新。
+
 当前仓库包含 Android 代码、其运行时和共享依赖。导入时排除了上游网站、分发服务、其他平台工程与上游发布工作流。素材排除范围包括上游品牌源图及生成图、Deepy 和鲸娘宠物源文件及生成包、鲸尾活动图、求星弹窗贴纸、带原品牌或吉祥物的展示图和测试图。无品牌图片时使用中性图标。品牌构建可使用项目方提供的 PNG 图标。素材条款见 [ASSETS.md](../ASSETS.md)。
 
 开发 APK 使用上游匹配版本的 Flutter、JDK 17、Android SDK/NDK 与对应 ABI 的运行时。品牌构建使用下列参数：
@@ -29,6 +31,10 @@ Agent Mobile 是 [dsh-Go](https://github.com/ccch1mneyyy/dsh-Go) 的 Android 衍
 后台「构建发布」中可下载 Android 测试包并单独推送安卓版。正式推送更新桌面侧栏「手机端」的下载二维码和新版 Android 客户端的更新源。管理者可直接从后台操作。
 
 梦羽 Agent 的正式 Android 版本由构建机指定，与上游 Flutter 工程的默认版本分开维护。发布时锁定版本标签对应的完整源码提交及构建机上的 Android 版本。管理员在「构建发布」检查 arm64 APK、对应源码和更新元数据，验收原签名覆盖升级和品牌登录后，再按项目推送安卓版。
+
+### 梦羽 Agent Android 0.1.6
+
+改善本机新建会话、长会话列表、DNS 回退和引擎升级恢复。聊天支持长按选字与引用，保留每轮历史图片，优化模型长名称展示和长图分享。
 
 ### 梦羽 Agent Android 0.1.5
 
