@@ -731,7 +731,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> with WidgetsBindingObse
       if (id != null) await client.ensureTarget(id);
       if (!current()) return;
       final target = id == null ? null : client.target(id);
-      final catalog = await client.remote.request('chat/options', {
+      final catalog = await client.request('chat/options', {
         'workspaceId': ?(target?['workspaceId'] ?? ref.read(selectedWorkspaceProvider)?.workspaceId),
       });
       if (!mounted || !current()) return;

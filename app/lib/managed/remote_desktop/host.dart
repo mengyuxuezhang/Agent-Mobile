@@ -4,19 +4,34 @@ import 'package:dsh_client/dsh_client.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../session.dart';
 import 'client.dart';
 import 'options.dart';
 
-final desktopPairProvider = StreamProvider<String?>((ref) async* {
+final desktopDevicesProvider = StreamProvider<List<DesktopDevice>>((ref) async* {
+  final signedIn = ref.watch(managedSignedInProvider);
   final remote = ref.watch(desktopRemoteProvider);
-  yield remote.pairId;
-  yield* remote.linkChanges.stream.map((_) => remote.pairId);
+  if (!signedIn) {
+    yield const [];
+    return;
+  }
+  await remote.restore();
+  yield remote.devices;
+  yield* remote.linkChanges.stream.map((_) => remote.devices);
+});
+
+final desktopOnlineProvider = StreamProvider.autoDispose.family<bool?, String>((ref, id) async* {
+  final remote = ref.watch(desktopRemoteProvider);
+  yield await remote.online(id);
+  yield* Stream<void>.periodic(const Duration(seconds: 8)).asyncMap((_) => remote.online(id));
 });
 
 /// Presents the desktop relay's inventory to the shared mobile session drawer.
 class DesktopHostClient extends DshClient {
-  DesktopHostClient(this.remote) : super.withCarrier(_DesktopCarrier());
+  DesktopHostClient(this.remote, [this.pairId]) : super.withCarrier(_DesktopCarrier());
+  final String? pairId;
   final DesktopRemoteClient remote;
+  Future<RemoteJson> request(String method, [RemoteJson fields = const {}]) => remote.request(method, fields, pairId);
   final _targets = <String, String>{};
   final _titles = <String, String>{};
   final _options = <String?, DesktopOptions>{};
@@ -24,6 +39,7 @@ class DesktopHostClient extends DshClient {
   final _workspaceUpdates = StreamController<WorkspaceUpdate>.broadcast();
   List<Workspace> _workspaces = [];
   bool _hasInventory = false;
+  bool questionCards = false;
   Future<List<SessionSummary>>? _inventory;
 
   DesktopOptions options(String? sessionId) =>
@@ -56,7 +72,8 @@ class DesktopHostClient extends DshClient {
   }
 
   Future<List<SessionSummary>> _readInventory() async {
-    final inventory = await remote.request('workspaces/list');
+    final inventory = await request('workspaces/list');
+    questionCards = inventory['questionCards'] == true;
     final workspaces = desktopItems(inventory['workspaces']);
     final sessions = <SessionSummary>[];
     void add(RemoteJson row, String workspaceId) {
@@ -80,7 +97,7 @@ class DesktopHostClient extends DshClient {
       String? before;
       final seen = <String>{};
       do {
-        final page = await remote.request('sessions/recent', {'before': ?before});
+        final page = await request('sessions/recent', {'before': ?before});
         for (final row in desktopItems(page['sessions'])) {
           add(row, row['workspaceId'] as String);
         }
@@ -89,7 +106,7 @@ class DesktopHostClient extends DshClient {
     } else {
       for (final workspace in workspaces) {
         final id = workspace['id'] as String;
-        final page = await remote.request('sessions/list', {'workspaceId': id});
+        final page = await request('sessions/list', {'workspaceId': id});
         for (final row in desktopItems(page['sessions'])) {
           add(row, id);
         }
@@ -135,7 +152,7 @@ class DesktopHostClient extends DshClient {
     String? sessionId,
   }) async {
     final picks = options(null);
-    final result = await remote.request('sessions/create', {
+    final result = await request('sessions/create', {
       'workspaceId': ?workspaceId,
       'modelId': ?picks.model,
       'agentId': ?picks.expert,

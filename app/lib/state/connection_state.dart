@@ -255,7 +255,7 @@ final hostLinkStatusProvider = StreamProvider.autoDispose.family<HostLinkStatus,
 final hostNameProvider = Provider.autoDispose.family<String?, HostRef>((ref, host) {
   return switch (host.kind) {
     HostKind.local => appL10n.commonThisPhone,
-    HostKind.desktop => appL10n.desktopRemoteHostName,
+    HostKind.desktop => host.name ?? appL10n.desktopRemoteHostName,
     HostKind.ssh => ref.watch(hostsProvider.select((s) => s.sshById(host.id)?.name)),
     HostKind.relay => ref.watch(relayAccountProvider.select((a) => a.value?.hostById(host.id)?.name)) ?? host.name,
   };
@@ -549,9 +549,13 @@ final activeConnectionProvider = Provider<AsyncValue<HostConnection?>>((ref) {
 AsyncValue<HostConnection?> _connectionForHost(Ref ref, HostRef host) {
   switch (host.kind) {
     case HostKind.desktop:
-      ref.watch(desktopPairProvider);
-      final remote = ref.watch(desktopRemoteProvider);
-      if (remote.pairId != host.id) return const AsyncData(null);
+      final devices = ref.watch(desktopDevicesProvider);
+      if (devices.isLoading) return const AsyncLoading();
+      if (devices.hasError) return AsyncError(devices.error!, devices.stackTrace!);
+      if (devices.value?.any((device) => device.id == host.id) != true) return const AsyncData(null);
+      final presence = ref.watch(desktopOnlineProvider(host.id));
+      if (presence.isLoading) return const AsyncLoading();
+      if (presence.value == false) return const AsyncData(null);
       return AsyncData(ref.watch(_desktopConnectionProvider(host)));
     case HostKind.local:
       return ref.watch(localConnectionProvider);
@@ -567,7 +571,7 @@ AsyncValue<HostConnection?> _connectionForHost(Ref ref, HostRef host) {
 }
 
 final _desktopConnectionProvider = Provider.autoDispose.family<HostConnection, HostRef>((ref, host) {
-  final client = DesktopHostClient(ref.watch(desktopRemoteProvider));
+  final client = DesktopHostClient(ref.watch(desktopRemoteProvider), host.id);
   ref.onDispose(() => unawaited(client.close()));
-  return HostConnection(client: client, isLocal: false, kind: host.kind, hostId: host.id);
+  return HostConnection(client: client, isLocal: false, kind: host.kind, hostId: host.id, name: host.name);
 });

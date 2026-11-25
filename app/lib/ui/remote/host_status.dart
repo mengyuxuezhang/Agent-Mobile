@@ -40,9 +40,12 @@ HostStatusView watchHostStatus(WidgetRef ref, HostRef host) {
     return HostStatusView(view.tone, view.label);
   }
   if (host.kind == HostKind.desktop) {
-    return ref.watch(desktopPairProvider).value == host.id
-        ? HostStatusView(StatusTone.ok, appL10n.remoteConnected)
-        : HostStatusView(StatusTone.idle, appL10n.commonNotConnected);
+    final online = ref.watch(desktopOnlineProvider(host.id)).value;
+    return switch (online) {
+      true => HostStatusView(StatusTone.ok, appL10n.remoteOnline),
+      false => HostStatusView(StatusTone.idle, appL10n.remoteOffline),
+      null => HostStatusView(StatusTone.idle, appL10n.commonNotConnected),
+    };
   }
   final status = ref.watch(hostLinkStatusProvider(host)).value ?? HostLinkStatus.idle;
   return HostStatusView.ofLink(status);

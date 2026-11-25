@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
 import '../../managed/brand.dart';
+import '../../managed/remote_desktop/host.dart';
 import '../../managed/remote_desktop/screen.dart';
 import '../../managed/session.dart';
 import '../../remote/relay/relay_backend.dart';
@@ -94,6 +95,7 @@ class RemoteScreen extends ConsumerWidget {
     final active = ref.watch(activeHostProvider);
     const managed = ManagedBrand.isConfigured;
     final signedIn = !managed && ref.watch(relayAccountProvider.select((a) => a.value?.signedIn ?? false));
+    final hasDesktop = managed && ref.watch(desktopDevicesProvider).value?.isNotEmpty == true;
     void push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
     return AppPage.list(
       title: l10n.commonRemoteHost,
@@ -163,7 +165,7 @@ class RemoteScreen extends ConsumerWidget {
             ],
           ),
         // Only meaningful once there is a host to come back to.
-        if (ssh.isNotEmpty || signedIn)
+        if (ssh.isNotEmpty || signedIn || hasDesktop)
           SettingsSection(
             title: l10n.remoteStartupSection,
             children: [
@@ -193,15 +195,14 @@ class _ActiveCard extends ConsumerWidget {
     final l10n = context.l10n;
     if (active.isLocal) return const SizedBox.shrink();
     final status = ref.watch(hostLinkStatusProvider(active)).value ?? HostLinkStatus.idle;
-    final view = HostStatusView.ofLink(status);
+    final view = active.kind == HostKind.desktop ? watchHostStatus(ref, active) : HostStatusView.ofLink(status);
     final name = ref.watch(hostNameProvider(active)) ?? l10n.commonRemoteHost;
     final ssh = active.kind == HostKind.ssh ? ref.watch(hostsProvider).sshById(active.id) : null;
     final error = status.error;
     // Errors a retry can't fix go to the host's settings (SSH) or the trust
     // check (relay) instead.
-    final needsLogin = !ManagedBrand.isConfigured &&
-        active.kind == HostKind.relay &&
-        error?.kind == HostLinkErrorKind.notLoggedIn;
+    final needsLogin =
+        !ManagedBrand.isConfigured && active.kind == HostKind.relay && error?.kind == HostLinkErrorKind.notLoggedIn;
     final needsSettings = ssh != null && error != null && !error.retryable;
     final needsTrust =
         active.kind == HostKind.relay &&

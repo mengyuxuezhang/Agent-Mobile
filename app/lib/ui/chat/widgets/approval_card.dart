@@ -89,7 +89,8 @@ class _ApprovalCardState extends State<ApprovalCard> {
   Future<void> _desktopChoice(Map<String, dynamic>? choice) async {
     final respond = widget.onDesktopChoice;
     if (_busy != null || respond == null) return;
-    if (choice?['kind'] == 'fullAccess' && (!await confirmRisk(context, RiskNotices.fullAccess) || !mounted)) return;
+    final fullAccess = choice?['kind'] == 'fullAccess' || choice?['confirmFullAccess'] == true;
+    if (fullAccess && (!await confirmRisk(context, RiskNotices.fullAccess) || !mounted)) return;
     setState(() => _busy = ApprovalDecision.allowOnce);
     await respond(choice?['id'] as String?);
     if (mounted) setState(() => _busy = null);
@@ -121,6 +122,8 @@ class _ApprovalCardState extends State<ApprovalCard> {
     final code = view?.command ?? (view?.path == null ? null : view!.path);
     final description = view?.arg('description')?.trim();
     final reason = _reason(l10n.localeName);
+    final choices = desktopItems(widget.request.raw['choices']);
+    final isPlan = choices.any((choice) => choice['kind'] == 'approved');
     const button = Size(0, 44);
 
     return ChatCard(
@@ -146,8 +149,8 @@ class _ApprovalCardState extends State<ApprovalCard> {
                 const SizedBox(height: 8),
                 Text(
                   reason,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: isPlan ? null : 3,
+                  overflow: isPlan ? null : TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(color: dsh.textTertiary),
                 ),
               ],
@@ -156,7 +159,7 @@ class _ApprovalCardState extends State<ApprovalCard> {
                 Wrap(
                   spacing: 8,
                   children: [
-                    for (final choice in desktopItems(widget.request.raw['choices']))
+                    for (final choice in choices)
                       OutlinedButton(
                         onPressed: _busy == null ? () => _desktopChoice(choice) : null,
                         child: Text(switch (choice['kind']) {
@@ -169,7 +172,7 @@ class _ApprovalCardState extends State<ApprovalCard> {
                           _ => choice['name'] as String,
                         }),
                       ),
-                    if (!desktopItems(widget.request.raw['choices']).any((choice) => choice['kind'] == 'cancelled'))
+                    if (!choices.any((choice) => choice['kind'] == 'cancelled'))
                       TextButton(
                         onPressed: _busy == null ? () => _desktopChoice(null) : null,
                         child: Text(l10n.desktopRemoteDecline),

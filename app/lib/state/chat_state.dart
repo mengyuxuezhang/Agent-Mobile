@@ -1921,6 +1921,7 @@ class ChatController extends Notifier<ChatState> {
   }
 
   Future<bool> answer(UserQuestionRequest request, List<QuestionAnswer> answers) async {
+    if (_desktop case final feed?) return feed.answer(request, answers);
     final scope = _approvalScope;
     try {
       await _client?.answerQuestion(request, answers);
@@ -1935,6 +1936,7 @@ class ChatController extends Notifier<ChatState> {
   /// Settles the pending Host waterfall as rejected. Keep the card until the
   /// Host/client cancellation event removes it; an RPC failure leaves it retryable.
   Future<bool> rejectQuestion(UserQuestionRequest request) async {
+    if (_desktop case final feed?) return feed.answer(request, null);
     final client = _client;
     if (client == null) return false;
     final scope = _approvalScope;

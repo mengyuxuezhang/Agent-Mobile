@@ -65,7 +65,7 @@ class DesktopChatFeed {
   Future<bool> refresh() async {
     if (_closed || !_foreground || _reading) return false;
     _timer?.cancel();
-    final delay = _opening ? Duration.zero : client.remote.chatWatchDelay;
+    final delay = _opening ? Duration.zero : client.remote.watchDelay(client.pairId);
     if (delay > Duration.zero) {
       _schedule(delay);
       return false;
@@ -75,9 +75,10 @@ class DesktopChatFeed {
     try {
       if (_opening) await client.ensureTarget(id);
       if (_closed) return false;
-      final result = await client.remote.request(_opening ? 'chat/open' : 'chat/watch', {
+      final result = await client.request(_opening ? 'chat/open' : 'chat/watch', {
         ...client.target(id),
         if (!_opening) 'revision': ?(_snapshot?['revision'] as String?),
+        if (!_opening && client.questionCards) 'questionCards': true,
       });
       if (_closed) return false;
       _opening = false;
@@ -96,7 +97,8 @@ class DesktopChatFeed {
     } catch (error) {
       _readFailures++;
       final busy = error is DesktopRemoteException && error.code == 'RELAY_BUSY';
-      if (busy) retryDelay = const Duration(seconds: 4);
+      final offline = error is DesktopRemoteException && error.code == 'DESKTOP_OFFLINE';
+      if (busy || offline) retryDelay = const Duration(seconds: 4);
       final canRetry =
           !_opening && client.remote.connected && !(error is DesktopRemoteException && error.code == 'DESKTOP_OFFLINE');
       // A busy relay can still be carrying a live desktop turn.
@@ -195,6 +197,10 @@ class DesktopChatFeed {
             raw: {...approval, 'managedDesktop': true},
           ),
       ],
+      questions: [
+        for (final request in desktopItems(snapshot['questions']))
+          UserQuestionRequest.fromWaterfall(request['id'] as String, id, request),
+      ],
       notice: snapshot['desktopInteraction'] == true ? appL10n.desktopRemoteOnComputer : null,
     );
     if (snapshot['error'] case final String code) {
@@ -208,7 +214,7 @@ class DesktopChatFeed {
       int? offset = 0;
       final text = StringBuffer();
       while (!_closed && offset != null) {
-        final result = await client.remote.request('chat/message', {
+        final result = await client.request('chat/message', {
           ...client.target(id),
           'messageId': messageId,
           'offset': offset,
@@ -233,7 +239,7 @@ class DesktopChatFeed {
     _paging = true;
     _emit();
     try {
-      final result = await client.remote.request('chat/state', {...client.target(id), 'before': cursor});
+      final result = await client.request('chat/state', {...client.target(id), 'before': cursor});
       if (_closed) return;
       final page = result['chat'] as RemoteJson;
       final previous = Map<String, RemoteJson>.of(_older);
@@ -260,7 +266,7 @@ class DesktopChatFeed {
     _acting = true;
     publish(_view = _view.copyWith(clearError: true, stopping: method == 'chat/stop'));
     try {
-      await client.remote.request(method, {...client.target(id), ...fields});
+      await client.request(method, {...client.target(id), ...fields});
       if (!_closed) unawaited(refresh());
       return true;
     } catch (error) {
@@ -287,9 +293,24 @@ class DesktopChatFeed {
 
   void dismissError() => publish(_view = _view.copyWith(clearError: true));
 
+  Future<bool> answer(UserQuestionRequest request, List<QuestionAnswer>? answers) {
+    if (request.sessionId != id) return Future.value(false);
+    return act('chat/answer', {
+      'interactionId': request.eventId,
+      if (answers == null) 'cancelled': true,
+      if (answers != null)
+        'answers': [
+          for (final answer in answers)
+            {'index': int.parse(answer.id), 'selected': answer.selected, 'custom': ?answer.custom},
+        ],
+    });
+  }
+
   Future<void> decide(ApprovalRequest request, String? optionId) async {
     final choices = desktopItems(request.raw['choices']);
-    final full = choices.any((option) => option['id'] == optionId && option['kind'] == 'fullAccess');
+    final full = choices.any(
+      (option) => option['id'] == optionId && (option['kind'] == 'fullAccess' || option['confirmFullAccess'] == true),
+    );
     await act('chat/decide', {
       'interactionId': request.eventId,
       'optionId': ?optionId,

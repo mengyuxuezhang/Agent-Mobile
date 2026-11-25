@@ -44,8 +44,8 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
     }
   }
 
-  void _openHost(String id) {
-    ref.read(activeHostProvider.notifier).select(HostRef.desktop(id));
+  void _openHost(String id, {String? name}) {
+    ref.read(activeHostProvider.notifier).select(HostRef.desktop(id, name: name));
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
@@ -53,7 +53,7 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
     await _client.pair(code);
     if (!mounted) return;
     _code.clear();
-    if (_client.pairId case final id?) _openHost(id);
+    if (_client.devices.lastOrNull case final device?) _openHost(device.id, name: device.name);
   }
 
   Future<void> _scan() async {
@@ -82,8 +82,7 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
   Widget build(BuildContext context) {
     final l10n = context.l10n;
     final signedIn = ref.watch(managedSignedInProvider);
-    ref.watch(desktopPairProvider);
-    final pair = signedIn ? _client.pairId : null;
+    final devices = signedIn ? ref.watch(desktopDevicesProvider) : const AsyncData(<DesktopDevice>[]);
     return Scaffold(
       appBar: AppBar(title: Text(l10n.desktopRemoteTitle)),
       body: SafeArea(
@@ -100,7 +99,30 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
                         .push<void>(MaterialPageRoute(builder: (_) => const ManagedAccountPage(finishOnSignIn: true))),
                 child: Text(l10n.desktopRemoteLogin),
               ),
-            ] else if (pair == null) ...[
+            ] else ...[
+              if (devices.hasError) _Feedback(text: desktopErrorText(devices.error!)),
+              for (final device in devices.value ?? const <DesktopDevice>[])
+                ListTile(
+                  leading: const Icon(Icons.computer),
+                  title: Text(device.name ?? '${l10n.desktopRemoteHostName} · ${device.id.split('-').first}'),
+                  subtitle: Text(switch (ref.watch(desktopOnlineProvider(device.id)).value) {
+                    true => l10n.remoteOnline,
+                    false => l10n.remoteOffline,
+                    null => l10n.commonNotConnected,
+                  }),
+                  onTap: _busy ? null : () => _openHost(device.id, name: device.name),
+                  trailing: IconButton(
+                    tooltip: l10n.desktopRemoteDisconnect,
+                    icon: const Icon(Icons.link_off),
+                    onPressed: _busy
+                        ? null
+                        : () => _run(() async {
+                            final host = ref.read(activeHostProvider.notifier);
+                            await _client.revokeDevice(device.id);
+                            if (mounted) await host.forget((h) => h == HostRef.desktop(device.id));
+                          }),
+                  ),
+                ),
               _Feedback(text: l10n.desktopRemotePairInstructions),
               FilledButton.icon(
                 onPressed: _busy ? null : _scan,
@@ -133,28 +155,6 @@ class _DesktopRemoteScreenState extends ConsumerState<DesktopRemoteScreen> {
                 onPressed: _busy ? null : () => _run(() => _pair(_code.text)),
                 icon: const Icon(Icons.link),
                 label: Text(l10n.desktopRemoteConnect),
-              ),
-            ] else ...[
-              ListTile(
-                leading: const Icon(Icons.computer),
-                title: Text(l10n.desktopRemoteHostName),
-                subtitle: Text(l10n.remoteConnected),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _busy ? null : () => _openHost(pair),
-              ),
-              OutlinedButton.icon(
-                onPressed: _busy
-                    ? null
-                    : () => _run(() async {
-                        final host = ref.read(activeHostProvider.notifier);
-                        try {
-                          await _client.revoke();
-                        } finally {
-                          if (mounted) await host.forget((h) => h == HostRef.desktop(pair));
-                        }
-                      }),
-                icon: const Icon(Icons.link_off),
-                label: Text(l10n.desktopRemoteDisconnect),
               ),
             ],
           ],

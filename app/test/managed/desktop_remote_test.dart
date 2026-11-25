@@ -1,11 +1,16 @@
 import 'dart:convert';
 
 import 'package:cryptography/cryptography.dart';
+import 'package:dsh_client/dsh_client.dart';
 import 'package:dsh_app/l10n/l10n.dart';
 import 'package:dsh_app/managed/brand.dart';
+import 'package:dsh_app/managed/remote_desktop/chat_feed.dart';
 import 'package:dsh_app/managed/remote_desktop/client.dart';
+import 'package:dsh_app/managed/remote_desktop/host.dart';
 import 'package:dsh_app/managed/remote_desktop/screen.dart';
 import 'package:dsh_app/managed/session.dart';
+import 'package:dsh_app/secrets/secure_storage.dart';
+import 'package:dsh_app/state/chat_state.dart';
 import 'package:dsh_app/state/hosts_state.dart';
 import 'package:dsh_app/state/sessions_state.dart';
 import 'package:dsh_app/ui/remote/pairing_page.dart';
@@ -14,6 +19,7 @@ import 'package:dsh_app/ui/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -95,6 +101,31 @@ void main() {
     expect(app.read(currentSessionProvider), 'phone-chat');
   });
 
+  testWidgets('managed remote settings show the active computer name and heartbeat status', (tester) async {
+    if (!ManagedBrand.isConfigured) return;
+    const office = HostRef.desktop('office-test', name: 'Office PC');
+    SharedPreferences.setMockInitialValues({ActiveHostController.prefsKey: office.encode()});
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          managedSignedInProvider.overrideWithValue(true),
+          desktopDevicesProvider.overrideWith((ref) => Stream.value([(id: office.id, name: office.name)])),
+          desktopOnlineProvider(office.id).overrideWith((ref) => Stream.value(true)),
+        ],
+        child: MaterialApp(
+          locale: const Locale('en'),
+          theme: buildLightTheme(),
+          localizationsDelegates: L10n.localizationsDelegates,
+          supportedLocales: L10n.supportedLocales,
+          home: const RemoteScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Using “Office PC”'), findsOneWidget);
+    expect(find.text(appL10n.remoteOnline), findsOneWidget);
+  });
+
   test('grouped manual code and scanned QR claim the same pairing', () async {
     final entropy = List<int>.filled(16, 7);
     final key = (await Sha256().hash([...utf8.encode('agent-remote-manual-v1\u0000'), ...entropy])).bytes;
@@ -148,15 +179,15 @@ void main() {
 
     await client.pair('agent-remote-v1:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA');
     await timedOut('chat/watch');
-    expect(client.chatWatchDelay, const Duration(milliseconds: 2100));
+    expect(client.watchDelay(), const Duration(milliseconds: 2100));
 
     now += const Duration(seconds: 3);
     for (var i = 0; i < 25; i++) {
       await timedOut('sessions/recent');
     }
-    expect(client.chatWatchDelay, const Duration(milliseconds: 42500));
+    expect(client.watchDelay(), const Duration(milliseconds: 42500));
     now = const Duration(milliseconds: 45500);
-    expect(client.chatWatchDelay, Duration.zero);
+    expect(client.watchDelay(), Duration.zero);
 
     busy = true;
     await expectLater(
@@ -170,6 +201,84 @@ void main() {
       throwsA(isA<DesktopRemoteException>().having((e) => e.code, 'code', 'DESKTOP_OFFLINE')),
     );
     expect(client.connected, true);
+  });
+
+  test('restores multiple named computers under the same account after login changes', () async {
+    FlutterSecureStorage.setMockInitialValues({});
+    const office = '2576a4b4-4b6d-4ad5-9bb8-cb494623198d';
+    const home = '2576a4b4-4b6d-4ad5-9bb8-cb494623198e';
+    var token = 'first-login';
+    var claims = 0;
+    final transport = MockClient((request) async {
+      final segments = request.url.pathSegments;
+      final data = switch (segments.last) {
+        'claims' =>
+          ++claims == 1 ? {'pairId': office, 'deviceName': 'Office PC'} : {'pairId': home, 'deviceName': 'Home PC'},
+        'status' => {'online': segments[segments.length - 2] == office},
+        'disconnect' => {'revoked': true},
+        _ => throw StateError('Unexpected request: ${request.url}'),
+      };
+      return http.Response(jsonEncode({'success': true, 'data': data}), 200);
+    });
+    DesktopRemoteClient start() => DesktopRemoteClient(
+      transport,
+      Uri.parse('https://example.test/api/'),
+      'brand',
+      () => token,
+      storage: const AppSecureStorage(),
+      accountId: (token) async => token == 'other-login' ? 'other' : 'owner',
+    );
+    final initial = start();
+    for (final value in [1, 2]) {
+      final code = base64Url.encode(List<int>.filled(32, value)).replaceAll('=', '');
+      await initial.pair('agent-remote-v1:$code');
+    }
+    token = 'renewed-login';
+    final restored = start();
+    await restored.restore();
+    expect(restored.devices, [(id: office, name: 'Office PC'), (id: home, name: 'Home PC')]);
+    expect(await restored.online(office), isTrue);
+    expect(await restored.online(home), isFalse);
+    await restored.revokeDevice(office);
+    final reduced = start();
+    await reduced.restore();
+    expect(reduced.devices.single.id, home);
+    token = 'other-login';
+    await reduced.restore();
+    expect(reduced.devices, isEmpty);
+    expect(claims, 2);
+  });
+
+  test('shows remote Ask in the native chat state and sends its answer back to the selected computer', () async {
+    final remote = _QuestionRemote();
+    final host = DesktopHostClient(remote, 'office');
+    final views = <ChatState>[];
+    final feed = DesktopChatFeed(host, 'chat', views.add);
+    addTearDown(() async {
+      feed.close();
+      await host.close();
+    });
+    expect(await feed.refresh(), isTrue);
+    expect(await feed.refresh(), isTrue);
+    final request = views.last.questions.single;
+    expect(request.questions.single.options.single.label, 'Markdown');
+    expect(
+      await feed.answer(request, [
+        const QuestionAnswer('0', selected: ['Markdown']),
+      ]),
+      isTrue,
+    );
+    expect(remote.answer, {
+      'workspaceId': 'work',
+      'sessionId': 'chat',
+      'interactionId': 'ask',
+      'answers': [
+        {
+          'index': 0,
+          'selected': ['Markdown'],
+        },
+      ],
+    });
   });
 
   test('binds the encrypted request to the paired account and discards it after login changes', () async {
@@ -235,6 +344,68 @@ void main() {
   });
 }
 
+class _QuestionRemote extends DesktopRemoteClient {
+  _QuestionRemote()
+    : super(
+        MockClient((_) async => http.Response('', 500)),
+        Uri.parse('https://example.test/api/'),
+        'fixture',
+        () => 'login',
+      );
+
+  RemoteJson? answer;
+
+  @override
+  Future<RemoteJson> request(String method, [RemoteJson fields = const {}, String? deviceId]) async {
+    expect(deviceId, 'office');
+    switch (method) {
+      case 'workspaces/list':
+        return {
+          'questionCards': true,
+          'workspaces': [
+            {'id': 'work', 'name': 'Work'},
+          ],
+        };
+      case 'sessions/list':
+        return {
+          'sessions': [
+            {'id': 'chat', 'title': 'Chat', 'updatedAt': '2026-11-24T00:00:00Z', 'messageCount': 1},
+          ],
+        };
+      case 'chat/open':
+        return {
+          'chat': {'status': 'running'},
+        };
+      case 'chat/watch':
+        expect(fields['questionCards'], true);
+        return {
+          'chat': {
+            'status': 'running',
+            'questions': [
+              {
+                'id': 'ask',
+                'questions': [
+                  {
+                    'id': '0',
+                    'question': 'Choose a format',
+                    'options': [
+                      {'label': 'Markdown'},
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        };
+      case 'chat/answer':
+        answer = fields;
+        return {};
+      default:
+        throw StateError('Unexpected method: $method');
+    }
+  }
+}
+
 class _PairScreenClient extends DesktopRemoteClient {
   _PairScreenClient()
     : super(
@@ -250,12 +421,15 @@ class _PairScreenClient extends DesktopRemoteClient {
   String? get pairId => code == null ? null : 'test-pair';
 
   @override
+  List<DesktopDevice> get devices => code == null ? [] : [(id: 'test-pair', name: null)];
+
+  @override
   Future<void> pair(String value) async {
     code = value;
   }
 
   @override
-  Future<RemoteJson> request(String method, [RemoteJson fields = const {}]) async {
+  Future<RemoteJson> request(String method, [RemoteJson fields = const {}, String? deviceId]) async {
     expect(method, 'workspaces/list');
     return {'workspaces': []};
   }

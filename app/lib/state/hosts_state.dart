@@ -29,7 +29,7 @@ enum HostKind { local, ssh, relay, desktop }
 
 /// Identifies a host: the on-device engine, a saved SSH host, a relay
 /// (ds-harness-remote) device, or a paired desktop. Equality is by kind + id; [name] is only a
-/// cached display name for relay hosts (their list lives on the server).
+/// cached display name for relay hosts and paired desktops.
 class HostRef {
   const HostRef._(this.kind, this.id, [this.name]);
 
@@ -39,7 +39,7 @@ class HostRef {
 
   const HostRef.relay(String id, {String? name}) : this._(HostKind.relay, id, name);
 
-  const HostRef.desktop(String id) : this._(HostKind.desktop, id);
+  const HostRef.desktop(String id, {String? name}) : this._(HostKind.desktop, id, name);
 
   final HostKind kind;
   final String id;
@@ -59,6 +59,7 @@ class HostRef {
       if (id is! String || id.isEmpty) return local;
       return switch (map['kind']) {
         'ssh' => HostRef.ssh(id),
+        'desktop' => HostRef.desktop(id, name: name is String ? name : null),
         'relay' => HostRef.relay(id, name: name is String ? name : null),
         _ => local,
       };
@@ -82,7 +83,7 @@ String hostLabel(HostKind kind, String? name) => switch (kind) {
   HostKind.local => appL10n.commonThisPhone,
   HostKind.ssh => '${_short(name ?? appL10n.stateSshHost)} · SSH',
   HostKind.relay => appL10n.stateHostRemoteLabel(_short(name ?? appL10n.commonRemoteHost)),
-  HostKind.desktop => appL10n.stateHostRemoteLabel(appL10n.desktopRemoteHostName),
+  HostKind.desktop => appL10n.stateHostRemoteLabel(_short(name ?? appL10n.desktopRemoteHostName)),
 };
 
 String _short(String name) {
@@ -364,7 +365,7 @@ class ActiveHostController extends Notifier<HostRef> {
     }
     unawaited(
       SharedPreferences.getInstance()
-          .then((prefs) => prefs.setString(prefsKey, (host.kind == HostKind.desktop ? HostRef.local : host).encode()))
+          .then((prefs) => prefs.setString(prefsKey, host.encode()))
           .catchError((_) => false),
     );
   }

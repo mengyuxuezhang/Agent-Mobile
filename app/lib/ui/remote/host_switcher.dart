@@ -88,9 +88,9 @@ class HostSheet extends ConsumerWidget {
     final active = ref.watch(activeHostProvider);
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
     final account = ManagedBrand.isConfigured ? null : ref.watch(relayAccountProvider).value;
-    final pair = ManagedBrand.isConfigured && ref.watch(managedSignedInProvider)
-        ? ref.watch(desktopPairProvider).value
-        : null;
+    final desktops = ManagedBrand.isConfigured && ref.watch(managedSignedInProvider)
+        ? ref.watch(desktopDevicesProvider).value ?? const []
+        : const [];
     final relayHosts = account?.signedIn == true ? account!.hosts : const <RelayHost>[];
 
     Future<void> pick(HostRef host) async {
@@ -135,13 +135,13 @@ class HostSheet extends ConsumerWidget {
                       active: active.isLocal,
                       onTap: localMissing ? installLocal : () => pick(HostRef.local),
                     ),
-                  if (pair != null)
+                  for (final device in desktops)
                     _HostRow(
-                      host: HostRef.desktop(pair),
-                      title: l10n.desktopRemoteHostName,
+                      host: HostRef.desktop(device.id),
+                      title: device.name ?? '${l10n.desktopRemoteHostName} · ${device.id.split('-').first}',
                       subtitle: l10n.remoteRemoteLabel,
-                      active: active == HostRef.desktop(pair),
-                      onTap: () => pick(HostRef.desktop(pair)),
+                      active: active == HostRef.desktop(device.id),
+                      onTap: () => pick(HostRef.desktop(device.id, name: device.name)),
                     ),
                   for (final h in ssh)
                     _HostRow(
@@ -188,12 +188,14 @@ class HostSheet extends ConsumerWidget {
                       },
                     ),
                   SettingsTile(
-                    icon: pair == null && ssh.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
+                    icon: desktops.isEmpty && ssh.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
                     tinted: false,
-                    title: pair == null && ssh.isEmpty && relayHosts.isEmpty
+                    title: desktops.isEmpty && ssh.isEmpty && relayHosts.isEmpty
                         ? l10n.remoteConnectComputer
                         : l10n.remoteManageHosts,
-                    subtitle: pair == null && ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectionMethods : null,
+                    subtitle: desktops.isEmpty && ssh.isEmpty && relayHosts.isEmpty
+                        ? l10n.remoteConnectionMethods
+                        : null,
                     onTap: () {
                       Navigator.of(context).pop();
                       onManage();
